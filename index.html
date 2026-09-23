@@ -464,6 +464,7 @@ footer p { max-width: var(--measure); }
         <div class="controls">
           <button class="btn primary" id="t1Next" type="button">下一步</button>
           <button class="btn" id="t1Reset" type="button" data-i18n="p1Reset">重新開始</button>
+          <button class="btn" id="t1Auto" type="button">自動播放</button>
         </div>
 
         <p class="stepline"><b id="t1Round"></b> · <span id="t1StepNo"></span> — <span id="t1StepText"></span></p>
@@ -603,6 +604,7 @@ footer p { max-width: var(--measure); }
             <input type="range" id="t3Freq" min="9" max="18" step="0.1" value="13">
             <output id="t3FreqOut" for="t3Freq"></output>
           </div>
+          <button class="btn" id="t3Sweep" type="button">自動掃描</button>
         </div>
 
         <div class="plot">
@@ -1540,6 +1542,38 @@ footer p { max-width: var(--measure); }
     return { t, y, slow, fast, fs, n };
   }
 
+  /* ---------- the scrolling hero strip -----------------------
+     Every frequency is an exact integer multiple of 1/period and
+     the noise buffer is tiled, so the signal repeats sample for
+     sample. Three periods are generated and only the middle one
+     is displayed: that way the slice being scrolled is free of
+     the end effects at the buffer edges, and the wrap point is
+     seamless.                                                   */
+  const HERO_PERIOD = 2048;
+
+  function heroSignal() {
+    const fs = SLEEP_FS, P = HERO_PERIOD, n = P * 3;
+    const f0 = fs / P;                       /* fundamental */
+    const parts = [
+      { k: 16, a: 95, ph: 0 },
+      { k: 35, a: 32, ph: 1.0 },
+      { k: 9, a: 22, ph: 2.6 },
+      { k: 113, a: 7, ph: 0.3 },
+      { k: 225, a: 3, ph: 1.7 }
+    ];
+    const nz = gaussNoise(P, 2, 7331);       /* one period of noise, tiled */
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const ti = (i % P) / fs;
+      let v = 0;
+      for (let j = 0; j < parts.length; j++) {
+        v += parts[j].a * Math.sin(2 * Math.PI * parts[j].k * f0 * ti + parts[j].ph);
+      }
+      y[i] = v + nz[i % P];
+    }
+    return { t, y, fs, n, period: P };
+  }
+
   /* ---------- envelope / end-effect demo ---------------------
      Amplitude rises linearly, so the true upper envelope is
      known in closed form and the error of each boundary rule
@@ -1615,7 +1649,7 @@ footer p { max-width: var(--measure); }
   const SIGNALS = {
     rng, gaussNoise, gauss, timeAxis,
     teachingSignal, sleepSignal, spindleSignal, testSignal, mixingSignal,
-    amSignal, labSignal, extremaSignal,
+    amSignal, labSignal, extremaSignal, heroSignal, HERO_PERIOD,
     SLEEP_STAGES, SLEEP_FS, SLEEP_N, BANDS, bandOf
   };
 
@@ -1647,7 +1681,7 @@ footer p { max-width: var(--measure); }
       heroTitle: '把一夜的腦波，拆成它自己的節奏',
       heroLede: '經驗模態分解（EMD）不預設任何基底函數。它只問訊號自己：局部的起伏有多快？' +
                 '這個網站不是在講解演算法，而是把演算法交到你手上——每一條曲線都是你按下按鈕的當下，在瀏覽器裡算出來的。',
-      stripLeft: '合成 N3 慢波睡眠腦波 · fs = 100 Hz · N = 1024',
+      stripLeft: '合成慢波睡眠腦波，嚴格週期化以便無縫捲動 · fs = 100 Hz · 視窗 10.24 s',
       stripRight: '原始訊號與其本質模態函數（由上而下，頻率遞減）',
 
       introEyebrow: '起點',
@@ -1849,7 +1883,7 @@ footer p { max-width: var(--measure); }
       heroLede: 'Empirical Mode Decomposition assumes no basis functions. It asks the signal itself: ' +
                 'how fast does this wiggle, right here? This page is not an explanation of the algorithm — ' +
                 'it hands you the algorithm. Every curve below is computed in your browser the moment you click.',
-      stripLeft: 'Synthetic N3 slow-wave sleep EEG · fs = 100 Hz · N = 1024',
+      stripLeft: 'Synthetic slow-wave sleep EEG, made exactly periodic so it scrolls seamlessly · fs = 100 Hz · 10.24 s window',
       stripRight: 'Signal and its intrinsic mode functions, fastest at the top',
 
       introEyebrow: 'Starting point',
@@ -2275,6 +2309,8 @@ footer p { max-width: var(--measure); }
       ],
 
       /* ---- 03 的逐輪說明 ---- */
+      p1Auto: '自動播放', p1AutoStop: '停止播放',
+      p3Sweep: '自動掃描', p3SweepStop: '停止掃描',
       verdictNoWhy: '第 %1 輪的 h 還不是 IMF：%2。把 h 當作新訊號，回到步驟 1 再篩一次。',
       whyC1: '極值數與過零數相差 %1（要 ≤ 1）',
       whyC2: '包絡中線偏移 %1%（要 < 5%）',
@@ -2445,6 +2481,8 @@ footer p { max-width: var(--measure); }
         ['SHHS', '87.5%', '85.8%']
       ],
 
+      p1Auto: 'Play', p1AutoStop: 'Stop',
+      p3Sweep: 'Auto sweep', p3SweepStop: 'Stop',
       verdictNoWhy: 'The h of round %1 is not an IMF yet: %2. It becomes the new signal, and we sift again from step 1.',
       whyC1: 'extrema and zero crossings differ by %1 (needs ≤ 1)',
       whyC2: 'the envelope mean is off by %1% (needs < 5%)',
@@ -2663,22 +2701,49 @@ footer p { max-width: var(--measure); }
   /* ==========================================================
      HERO STRIP — a page of polysomnograph paper
      ========================================================== */
-  const HERO = { sig: null, dec: null };
+  /* Motion is opt-in and restrained: the strip scrolls because a
+     polysomnograph really does, and nothing else moves unless the
+     reader asks. Everything here honours prefers-reduced-motion
+     and stops while the tab is hidden.                          */
+  const MOTION = {
+    reduced: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  };
+
+  const HERO = { rows: [], period: 0, raf: 0, t0: 0, offset: 0 };
+  const HERO_SPEED = 42;          /* samples per second — one loop is ~49 s */
+
   function heroCompute() {
-    HERO.sig = SIGNALS.sleepSignal('n3', 2);
-    HERO.dec = EMD.emd(HERO.sig.y, 4);
+    const sig = SIGNALS.heroSignal();
+    const P = sig.period;
+    const dec = EMD.emd(sig.y, 4);
+    const src = [sig.y].concat(dec.imfs, [dec.residue]);
+    /* Keep only the middle period. It is free of the end effects at
+       the buffer edges, and because the input repeats sample for
+       sample, wrapping it leaves no visible seam: the step across
+       the wrap stays inside the 95th percentile of the ordinary
+       sample-to-sample steps of every row. */
+    HERO.rows = src.map(r => {
+      const out = new Float64Array(P);
+      for (let i = 0; i < P; i++) out[i] = r[P + i];
+      return out;
+    });
+    HERO.period = P;
   }
-  function drawHero() {
+
+  function drawHero(offset) {
     const cv = $('#heroCanvas');
     const c = ctxOf(cv, cv.clientWidth < 560 ? 220 : 300);
     if (!c) return;
-    const ctx = c.ctx, sig = HERO.sig;
-    const rows = [sig.y].concat(HERO.dec.imfs, [HERO.dec.residue]);
-    const nR = rows.length;
+    offset = offset || 0;
+    const ctx = c.ctx, P = HERO.period, rows = HERO.rows, nR = rows.length;
+    if (!nR) return;
     const padL = 8, padR = 8;
     const rowH = c.h / nR;
+    const width = Math.max(1, c.w - padL - padR);
+    const visible = Math.min(P, 1024);           /* about 10 s on screen */
+    const step = visible / width;
 
-    /* faint chart-paper ruling */
+    /* chart-paper ruling; the vertical rules travel with the paper */
     ctx.save();
     ctx.strokeStyle = COL.haze; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
     for (let k = 1; k < nR; k++) {
@@ -2686,31 +2751,48 @@ footer p { max-width: var(--measure); }
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(c.w - padR, y); ctx.stroke();
     }
     ctx.globalAlpha = 0.22;
-    for (let s = 1; s < 10; s++) {
-      const x = Math.round(padL + (c.w - padL - padR) * s / 10) + 0.5;
+    const gridSamples = visible / 10;
+    for (let g = Math.ceil(offset / gridSamples) * gridSamples; g < offset + visible; g += gridSamples) {
+      const x = Math.round(padL + (g - offset) / step) + 0.5;
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.h); ctx.stroke();
     }
     ctx.restore();
 
     rows.forEach((r, k) => {
-      const top = k * rowH, mid = top + rowH / 2;
+      const mid = k * rowH + rowH / 2;
       let mx = 0;
-      for (let i = 0; i < r.length; i++) mx = Math.max(mx, Math.abs(r[i]));
+      for (let i = 0; i < P; i++) { const a = Math.abs(r[i]); if (a > mx) mx = a; }
       const sc = mx > 0 ? (rowH * 0.40) / mx : 0;
       ctx.save();
-      ctx.strokeStyle = k === 0 ? COL.trace : COL.trace;
+      ctx.strokeStyle = COL.trace;
       ctx.globalAlpha = k === 0 ? 1 : 0.55;
       ctx.lineWidth = k === 0 ? 1.5 : 1.1;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      for (let i = 0; i < r.length; i++) {
-        const x = padL + (c.w - padL - padR) * i / (r.length - 1);
-        const y = mid - r[i] * sc;
-        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      for (let px = 0; px <= width; px++) {
+        const idx = Math.floor(offset + px * step) % P;
+        const y = mid - r[idx] * sc;
+        if (px) ctx.lineTo(padL + px, y); else ctx.moveTo(padL + px, y);
       }
       ctx.stroke();
       ctx.restore();
     });
+  }
+
+  function heroTick(ts) {
+    if (!HERO.t0) HERO.t0 = ts;
+    HERO.offset = ((ts - HERO.t0) / 1000 * HERO_SPEED) % HERO.period;
+    drawHero(HERO.offset);
+    HERO.raf = requestAnimationFrame(heroTick);
+  }
+  function heroStart() {
+    if (MOTION.reduced) { drawHero(HERO.offset); return; }
+    if (HERO.raf) return;
+    HERO.t0 = 0;
+    HERO.raf = requestAnimationFrame(heroTick);
+  }
+  function heroStop() {
+    if (HERO.raf) { cancelAnimationFrame(HERO.raf); HERO.raf = 0; }
   }
 
   /* ==========================================================
@@ -2859,6 +2941,23 @@ footer p { max-width: var(--measure); }
     }
     $('#t1Body').innerHTML = html;
     $('#t1PosOut').textContent = 'i = ' + i0;
+  }
+
+  /* Chapter 03 can walk itself through the rounds. */
+  const T1AUTO = { timer: 0 };
+  function t1AutoStop() {
+    if (T1AUTO.timer) { clearInterval(T1AUTO.timer); T1AUTO.timer = 0; }
+    const b = $('#t1Auto');
+    if (b) b.textContent = S.p1Auto;
+  }
+  function t1AutoToggle() {
+    if (T1AUTO.timer) { t1AutoStop(); return; }
+    if (T1.done) { t1Reset(); render1(); }
+    $('#t1Auto').textContent = S.p1AutoStop;
+    T1AUTO.timer = setInterval(() => {
+      if (T1.done) { t1AutoStop(); return; }
+      t1Next();
+    }, 1100);
   }
 
   /* ==========================================================
@@ -3058,6 +3157,34 @@ footer p { max-width: var(--measure); }
     ctx.save();
     ctx.restore();
     ctx.restore();
+  }
+
+  /* Chapter 06 can sweep the onset by itself: what happens while
+     the spindle moves is the whole argument, and it is easier to
+     watch than to read about.                                   */
+  const T3SWEEP = { raf: 0, t0: 0 };
+  const SWEEP_MIN = 1, SWEEP_MAX = 9.2, SWEEP_PERIOD = 16000;   /* ms, there and back */
+
+  function t3SweepStop() {
+    if (T3SWEEP.raf) { cancelAnimationFrame(T3SWEEP.raf); T3SWEEP.raf = 0; }
+    const b = $('#t3Sweep');
+    if (b) b.textContent = S.p3Sweep;
+  }
+  function t3SweepTick(ts) {
+    if (!T3SWEEP.t0) T3SWEEP.t0 = ts;
+    const u = ((ts - T3SWEEP.t0) % SWEEP_PERIOD) / SWEEP_PERIOD;
+    const tri = u < 0.5 ? u * 2 : 2 - u * 2;                     /* ping-pong */
+    T3.t0 = SWEEP_MIN + (SWEEP_MAX - SWEEP_MIN) * tri;
+    $('#t3Time').value = String(T3.t0);
+    t3Compute();
+    render3();
+    T3SWEEP.raf = requestAnimationFrame(t3SweepTick);
+  }
+  function t3SweepToggle() {
+    if (T3SWEEP.raf) { t3SweepStop(); return; }
+    $('#t3Sweep').textContent = S.p3SweepStop;
+    T3SWEEP.t0 = 0;
+    T3SWEEP.raf = requestAnimationFrame(t3SweepTick);
   }
 
   /* ==========================================================
@@ -3325,6 +3452,8 @@ footer p { max-width: var(--measure); }
   };
   let activeTab = 'sift';
   function showTab(k) {
+    if (k !== 'sift') t1AutoStop();
+    if (k !== 'spec') t3SweepStop();
     activeTab = k;
     $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
     $$('.panel').forEach(pn => { pn.hidden = pn.dataset.tab !== k; });
@@ -3345,6 +3474,8 @@ footer p { max-width: var(--measure); }
     });
     $('#langBtn').textContent = S.langBtn;
     $('#langBtn').title = S.langTitle;
+    $('#t1Auto').textContent = T1AUTO.timer ? S.p1AutoStop : S.p1Auto;
+    $('#t3Sweep').textContent = T3SWEEP.raf ? S.p3SweepStop : S.p3Sweep;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
@@ -3416,7 +3547,7 @@ footer p { max-width: var(--measure); }
       save('emd-theme', next);
       readColours();
       $('#themeBtn').textContent = next === 'dark' ? S.themeBtn : S.themeBtnDark;
-      drawHero();
+      drawHero(HERO.offset);
       redrawActive();
     });
     if (window.matchMedia) {
@@ -3425,7 +3556,7 @@ footer p { max-width: var(--measure); }
         if (document.documentElement.hasAttribute('data-theme')) return;
         readColours();
         $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
-        drawHero(); redrawActive();
+        drawHero(HERO.offset); redrawActive();
       };
       if (mq.addEventListener) mq.addEventListener('change', onScheme);
       else if (mq.addListener) mq.addListener(onScheme);
@@ -3526,16 +3657,26 @@ footer p { max-width: var(--measure); }
     mE.addEventListener('input', () => { TM.ens = +mE.value; schedule(() => { tmCompute(); renderMix(); }); });
     mN.addEventListener('input', () => { TM.noise = +mN.value; schedule(() => { tmCompute(); renderMix(); }); });
 
+    /* ---- the self-running demos ---- */
+    $('#t1Auto').addEventListener('click', t1AutoToggle);
+    $('#t3Sweep').addEventListener('click', t3SweepToggle);
+
+    /* nothing animates while nobody is looking */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { heroStop(); t1AutoStop(); t3SweepStop(); }
+      else heroStart();
+    });
+
     /* ---- resize ---- */
     let rt = 0;
     window.addEventListener('resize', () => {
       clearTimeout(rt);
-      rt = setTimeout(() => { drawHero(); redrawActive(); }, 120);
+      rt = setTimeout(() => { drawHero(HERO.offset); redrawActive(); }, 120);
     });
 
     applyLang();
     showTab('sift');
-    drawHero();
+    heroStart();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

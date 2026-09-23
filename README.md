@@ -76,6 +76,7 @@
 node test/test.js            # 規格第五節的驗收測試
 node test/sleep-check.js     # 五個睡眠期的 IMF 結構與雜訊示範
 node test/static-check.js    # 建置後的 index.html 一致性檢查
+node test/runtime-check.js   # 用 headless Chrome 實際跑過八章（需要 Chrome）
 node test/compare-boundary.js # 兩種端點處理的量化比較
 ```
 
@@ -132,7 +133,9 @@ node build.js && node test/test.js && node test/static-check.js
 ## 其他
 
 - **中英雙語**與**明暗主題**即時切換，同一頁改字串，不是兩份頁面；主題預設跟隨 `prefers-color-scheme`，選擇存在 `localStorage`。
-- 尊重 `prefers-reduced-motion`；手機版可用。
+- 動態只有三處：首頁的記錄紙持續捲動（訊號嚴格週期化，接縫步幅落在正常取樣間距的 95 百分位內，肉眼看不出），
+  以及第 03 章的「自動播放」與第 06 章的「自動掃描」兩顆按鈕。`prefers-reduced-motion` 下捲動靜止，
+  分頁切換或分頁隱藏時自動停止。手機版可用。
 - 所有腦波都是依睡眠醫學描述合成的訊號，**不是真實病人資料**。
 - 視覺概念是「整夜記錄」：冷色背景配暖色訊號線，讓曲線像睡眠實驗室裡發光的記錄筆。
 

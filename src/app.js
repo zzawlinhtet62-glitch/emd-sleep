@@ -200,22 +200,49 @@
   /* ==========================================================
      HERO STRIP — a page of polysomnograph paper
      ========================================================== */
-  const HERO = { sig: null, dec: null };
+  /* Motion is opt-in and restrained: the strip scrolls because a
+     polysomnograph really does, and nothing else moves unless the
+     reader asks. Everything here honours prefers-reduced-motion
+     and stops while the tab is hidden.                          */
+  const MOTION = {
+    reduced: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  };
+
+  const HERO = { rows: [], period: 0, raf: 0, t0: 0, offset: 0 };
+  const HERO_SPEED = 42;          /* samples per second — one loop is ~49 s */
+
   function heroCompute() {
-    HERO.sig = SIGNALS.sleepSignal('n3', 2);
-    HERO.dec = EMD.emd(HERO.sig.y, 4);
+    const sig = SIGNALS.heroSignal();
+    const P = sig.period;
+    const dec = EMD.emd(sig.y, 4);
+    const src = [sig.y].concat(dec.imfs, [dec.residue]);
+    /* Keep only the middle period. It is free of the end effects at
+       the buffer edges, and because the input repeats sample for
+       sample, wrapping it leaves no visible seam: the step across
+       the wrap stays inside the 95th percentile of the ordinary
+       sample-to-sample steps of every row. */
+    HERO.rows = src.map(r => {
+      const out = new Float64Array(P);
+      for (let i = 0; i < P; i++) out[i] = r[P + i];
+      return out;
+    });
+    HERO.period = P;
   }
-  function drawHero() {
+
+  function drawHero(offset) {
     const cv = $('#heroCanvas');
     const c = ctxOf(cv, cv.clientWidth < 560 ? 220 : 300);
     if (!c) return;
-    const ctx = c.ctx, sig = HERO.sig;
-    const rows = [sig.y].concat(HERO.dec.imfs, [HERO.dec.residue]);
-    const nR = rows.length;
+    offset = offset || 0;
+    const ctx = c.ctx, P = HERO.period, rows = HERO.rows, nR = rows.length;
+    if (!nR) return;
     const padL = 8, padR = 8;
     const rowH = c.h / nR;
+    const width = Math.max(1, c.w - padL - padR);
+    const visible = Math.min(P, 1024);           /* about 10 s on screen */
+    const step = visible / width;
 
-    /* faint chart-paper ruling */
+    /* chart-paper ruling; the vertical rules travel with the paper */
     ctx.save();
     ctx.strokeStyle = COL.haze; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
     for (let k = 1; k < nR; k++) {
@@ -223,31 +250,48 @@
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(c.w - padR, y); ctx.stroke();
     }
     ctx.globalAlpha = 0.22;
-    for (let s = 1; s < 10; s++) {
-      const x = Math.round(padL + (c.w - padL - padR) * s / 10) + 0.5;
+    const gridSamples = visible / 10;
+    for (let g = Math.ceil(offset / gridSamples) * gridSamples; g < offset + visible; g += gridSamples) {
+      const x = Math.round(padL + (g - offset) / step) + 0.5;
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.h); ctx.stroke();
     }
     ctx.restore();
 
     rows.forEach((r, k) => {
-      const top = k * rowH, mid = top + rowH / 2;
+      const mid = k * rowH + rowH / 2;
       let mx = 0;
-      for (let i = 0; i < r.length; i++) mx = Math.max(mx, Math.abs(r[i]));
+      for (let i = 0; i < P; i++) { const a = Math.abs(r[i]); if (a > mx) mx = a; }
       const sc = mx > 0 ? (rowH * 0.40) / mx : 0;
       ctx.save();
-      ctx.strokeStyle = k === 0 ? COL.trace : COL.trace;
+      ctx.strokeStyle = COL.trace;
       ctx.globalAlpha = k === 0 ? 1 : 0.55;
       ctx.lineWidth = k === 0 ? 1.5 : 1.1;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      for (let i = 0; i < r.length; i++) {
-        const x = padL + (c.w - padL - padR) * i / (r.length - 1);
-        const y = mid - r[i] * sc;
-        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      for (let px = 0; px <= width; px++) {
+        const idx = Math.floor(offset + px * step) % P;
+        const y = mid - r[idx] * sc;
+        if (px) ctx.lineTo(padL + px, y); else ctx.moveTo(padL + px, y);
       }
       ctx.stroke();
       ctx.restore();
     });
+  }
+
+  function heroTick(ts) {
+    if (!HERO.t0) HERO.t0 = ts;
+    HERO.offset = ((ts - HERO.t0) / 1000 * HERO_SPEED) % HERO.period;
+    drawHero(HERO.offset);
+    HERO.raf = requestAnimationFrame(heroTick);
+  }
+  function heroStart() {
+    if (MOTION.reduced) { drawHero(HERO.offset); return; }
+    if (HERO.raf) return;
+    HERO.t0 = 0;
+    HERO.raf = requestAnimationFrame(heroTick);
+  }
+  function heroStop() {
+    if (HERO.raf) { cancelAnimationFrame(HERO.raf); HERO.raf = 0; }
   }
 
   /* ==========================================================
@@ -396,6 +440,23 @@
     }
     $('#t1Body').innerHTML = html;
     $('#t1PosOut').textContent = 'i = ' + i0;
+  }
+
+  /* Chapter 03 can walk itself through the rounds. */
+  const T1AUTO = { timer: 0 };
+  function t1AutoStop() {
+    if (T1AUTO.timer) { clearInterval(T1AUTO.timer); T1AUTO.timer = 0; }
+    const b = $('#t1Auto');
+    if (b) b.textContent = S.p1Auto;
+  }
+  function t1AutoToggle() {
+    if (T1AUTO.timer) { t1AutoStop(); return; }
+    if (T1.done) { t1Reset(); render1(); }
+    $('#t1Auto').textContent = S.p1AutoStop;
+    T1AUTO.timer = setInterval(() => {
+      if (T1.done) { t1AutoStop(); return; }
+      t1Next();
+    }, 1100);
   }
 
   /* ==========================================================
@@ -595,6 +656,34 @@
     ctx.save();
     ctx.restore();
     ctx.restore();
+  }
+
+  /* Chapter 06 can sweep the onset by itself: what happens while
+     the spindle moves is the whole argument, and it is easier to
+     watch than to read about.                                   */
+  const T3SWEEP = { raf: 0, t0: 0 };
+  const SWEEP_MIN = 1, SWEEP_MAX = 9.2, SWEEP_PERIOD = 16000;   /* ms, there and back */
+
+  function t3SweepStop() {
+    if (T3SWEEP.raf) { cancelAnimationFrame(T3SWEEP.raf); T3SWEEP.raf = 0; }
+    const b = $('#t3Sweep');
+    if (b) b.textContent = S.p3Sweep;
+  }
+  function t3SweepTick(ts) {
+    if (!T3SWEEP.t0) T3SWEEP.t0 = ts;
+    const u = ((ts - T3SWEEP.t0) % SWEEP_PERIOD) / SWEEP_PERIOD;
+    const tri = u < 0.5 ? u * 2 : 2 - u * 2;                     /* ping-pong */
+    T3.t0 = SWEEP_MIN + (SWEEP_MAX - SWEEP_MIN) * tri;
+    $('#t3Time').value = String(T3.t0);
+    t3Compute();
+    render3();
+    T3SWEEP.raf = requestAnimationFrame(t3SweepTick);
+  }
+  function t3SweepToggle() {
+    if (T3SWEEP.raf) { t3SweepStop(); return; }
+    $('#t3Sweep').textContent = S.p3SweepStop;
+    T3SWEEP.t0 = 0;
+    T3SWEEP.raf = requestAnimationFrame(t3SweepTick);
   }
 
   /* ==========================================================
@@ -862,6 +951,8 @@
   };
   let activeTab = 'sift';
   function showTab(k) {
+    if (k !== 'sift') t1AutoStop();
+    if (k !== 'spec') t3SweepStop();
     activeTab = k;
     $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
     $$('.panel').forEach(pn => { pn.hidden = pn.dataset.tab !== k; });
@@ -882,6 +973,8 @@
     });
     $('#langBtn').textContent = S.langBtn;
     $('#langBtn').title = S.langTitle;
+    $('#t1Auto').textContent = T1AUTO.timer ? S.p1AutoStop : S.p1Auto;
+    $('#t3Sweep').textContent = T3SWEEP.raf ? S.p3SweepStop : S.p3Sweep;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
@@ -953,7 +1046,7 @@
       save('emd-theme', next);
       readColours();
       $('#themeBtn').textContent = next === 'dark' ? S.themeBtn : S.themeBtnDark;
-      drawHero();
+      drawHero(HERO.offset);
       redrawActive();
     });
     if (window.matchMedia) {
@@ -962,7 +1055,7 @@
         if (document.documentElement.hasAttribute('data-theme')) return;
         readColours();
         $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
-        drawHero(); redrawActive();
+        drawHero(HERO.offset); redrawActive();
       };
       if (mq.addEventListener) mq.addEventListener('change', onScheme);
       else if (mq.addListener) mq.addListener(onScheme);
@@ -1063,16 +1156,26 @@
     mE.addEventListener('input', () => { TM.ens = +mE.value; schedule(() => { tmCompute(); renderMix(); }); });
     mN.addEventListener('input', () => { TM.noise = +mN.value; schedule(() => { tmCompute(); renderMix(); }); });
 
+    /* ---- the self-running demos ---- */
+    $('#t1Auto').addEventListener('click', t1AutoToggle);
+    $('#t3Sweep').addEventListener('click', t3SweepToggle);
+
+    /* nothing animates while nobody is looking */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { heroStop(); t1AutoStop(); t3SweepStop(); }
+      else heroStart();
+    });
+
     /* ---- resize ---- */
     let rt = 0;
     window.addEventListener('resize', () => {
       clearTimeout(rt);
-      rt = setTimeout(() => { drawHero(); redrawActive(); }, 120);
+      rt = setTimeout(() => { drawHero(HERO.offset); redrawActive(); }, 120);
     });
 
     applyLang();
     showTab('sift');
-    drawHero();
+    heroStart();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

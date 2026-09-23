@@ -174,6 +174,38 @@
     return { t, y, slow, fast, fs, n };
   }
 
+  /* ---------- the scrolling hero strip -----------------------
+     Every frequency is an exact integer multiple of 1/period and
+     the noise buffer is tiled, so the signal repeats sample for
+     sample. Three periods are generated and only the middle one
+     is displayed: that way the slice being scrolled is free of
+     the end effects at the buffer edges, and the wrap point is
+     seamless.                                                   */
+  const HERO_PERIOD = 2048;
+
+  function heroSignal() {
+    const fs = SLEEP_FS, P = HERO_PERIOD, n = P * 3;
+    const f0 = fs / P;                       /* fundamental */
+    const parts = [
+      { k: 16, a: 95, ph: 0 },
+      { k: 35, a: 32, ph: 1.0 },
+      { k: 9, a: 22, ph: 2.6 },
+      { k: 113, a: 7, ph: 0.3 },
+      { k: 225, a: 3, ph: 1.7 }
+    ];
+    const nz = gaussNoise(P, 2, 7331);       /* one period of noise, tiled */
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const ti = (i % P) / fs;
+      let v = 0;
+      for (let j = 0; j < parts.length; j++) {
+        v += parts[j].a * Math.sin(2 * Math.PI * parts[j].k * f0 * ti + parts[j].ph);
+      }
+      y[i] = v + nz[i % P];
+    }
+    return { t, y, fs, n, period: P };
+  }
+
   /* ---------- envelope / end-effect demo ---------------------
      Amplitude rises linearly, so the true upper envelope is
      known in closed form and the error of each boundary rule
@@ -249,7 +281,7 @@
   const SIGNALS = {
     rng, gaussNoise, gauss, timeAxis,
     teachingSignal, sleepSignal, spindleSignal, testSignal, mixingSignal,
-    amSignal, labSignal, extremaSignal,
+    amSignal, labSignal, extremaSignal, heroSignal, HERO_PERIOD,
     SLEEP_STAGES, SLEEP_FS, SLEEP_N, BANDS, bandOf
   };
 

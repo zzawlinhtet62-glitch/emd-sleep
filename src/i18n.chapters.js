@@ -171,6 +171,8 @@
       ],
 
       /* ---- 03 的逐輪說明 ---- */
+      p1Auto: '自動播放', p1AutoStop: '停止播放',
+      p3Sweep: '自動掃描', p3SweepStop: '停止掃描',
       verdictNoWhy: '第 %1 輪的 h 還不是 IMF：%2。把 h 當作新訊號，回到步驟 1 再篩一次。',
       whyC1: '極值數與過零數相差 %1（要 ≤ 1）',
       whyC2: '包絡中線偏移 %1%（要 < 5%）',
@@ -341,6 +343,8 @@
         ['SHHS', '87.5%', '85.8%']
       ],
 
+      p1Auto: 'Play', p1AutoStop: 'Stop',
+      p3Sweep: 'Auto sweep', p3SweepStop: 'Stop',
       verdictNoWhy: 'The h of round %1 is not an IMF yet: %2. It becomes the new signal, and we sift again from step 1.',
       whyC1: 'extrema and zero crossings differ by %1 (needs ≤ 1)',
       whyC2: 'the envelope mean is off by %1% (needs < 5%)',
