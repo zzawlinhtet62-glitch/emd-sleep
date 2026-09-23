@@ -135,7 +135,7 @@ y[i] = 3*Math.sin(2*Math.PI*1.75*t)
 
 **[1]** Huang, N. E., Shen, Z., Long, S. R., Wu, M. C., Shih, H. H., Zheng, Q., Yen, N.-C., Tung, C. C., & Liu, H. H. (1998). *The empirical mode decomposition and the Hilbert spectrum for nonlinear and non-stationary time series analysis.* Proceedings of the Royal Society of London A, 454(1971), 903–995. DOI: 10.1098/rspa.1998.0193
 
-> 黃鍔院士的原始論文。引入「本質模態函數」概念，使瞬時頻率具有物理意義。分解為自適應，基於資料本身的局部特徵時間尺度，故適用於非線性與非穩態過程。最終呈現為能量–頻率–時間分布，即 Hilbert 譜。
+> 黃鍔院士的原始論文。引入「本徵模態函數」概念，使瞬時頻率具有物理意義。分解為自適應，基於資料本身的局部特徵時間尺度，故適用於非線性與非穩態過程。最終呈現為能量–頻率–時間分布，即 Hilbert 譜。
 
 **[2]** Wu, Z., & Huang, N. E. (2009). *Ensemble Empirical Mode Decomposition: A Noise-Assisted Data Analysis Method.* Advances in Adaptive Data Analysis, 1(1), 1–41. DOI: 10.1142/S1793536909000047
 
