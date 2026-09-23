@@ -502,7 +502,7 @@
     $('#t2NoiseOut').textContent = T2.noise.toFixed(0) + ' ' + S.p2NoiseUnit;
 
     const rows = [{ label: S.p2Signal, data: T2.sig.y, isSignal: true }];
-    T2.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    T2.dec.imfs.forEach((c, k) => rows.push({ label: S.imfLabel + (k + 1), data: c }));
     rows.push({ label: S.p2Residue, data: T2.dec.residue, isResidue: true });
 
     rows.forEach(r => {
@@ -863,7 +863,7 @@
     $('#lNoiseOut').textContent = TL.noise.toFixed(1);
 
     const rows = [{ label: S.p2Signal, data: TL.sig.y, isSignal: true }];
-    TL.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    TL.dec.imfs.forEach((c, k) => rows.push({ label: S.imfLabel + (k + 1), data: c }));
     rows.push({ label: S.p2Residue, data: TL.dec.residue, isResidue: true });
     rows.forEach(r => {
       if (r.isSignal || r.isResidue) {
@@ -907,7 +907,7 @@
       { label: S.p2Signal, data: TM.sig.y, isSignal: true },
       { label: S.mixTrue, data: TM.sig.fast, colour: COL.sage }
     ];
-    dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    dec.imfs.forEach((c, k) => rows.push({ label: S.imfLabel + (k + 1), data: c }));
     rows.push({ label: S.p2Residue, data: dec.residue, isResidue: true });
     rows.forEach((r, k) => {
       if (k === 1) { r.meta = '<b>' + r.label + '</b>' + TM.freq.toFixed(0) + ' Hz'; return; }
@@ -1004,6 +1004,7 @@
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
     $$('#t2Stages .btn').forEach(b => { b.textContent = S.stageNames[b.dataset.stage]; });
+    $$('#mMethods .btn').forEach(b => { b.textContent = S['mixMethod' + (b.dataset.method === 'emd' ? 'Emd' : 'Eemd')]; });
     $$('.tab').forEach(b => { b.textContent = S['tab_' + b.dataset.tab]; });
 
     buildImplList();
