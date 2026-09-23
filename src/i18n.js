@@ -23,15 +23,21 @@
       stripRight: '原始訊號與其本質模態函數（由上而下，頻率遞減）',
 
       introEyebrow: '起點',
-      introTitle: '傅立葉假設世界是平穩的，睡眠不是',
-      introP1: '傅立葉分析把訊號攤成一組永遠存在、振幅固定的正弦波。這對穩態訊號很好用，' +
-               '但睡眠腦波的重點全在「什麼時候發生」：一個紡錘波持續不到一秒，一個 K 複合波是單一事件，' +
-               '一次呼吸中止是一段突然消失的規律。把它們攤平成頻譜，等於把事件發生的時刻丟掉。',
-      introP2: '經驗模態分解走另一條路。它反覆用上下包絡線的中線，把訊號裡跑得最快的那一層「篩」出來，' +
+      introTitle: '為什麼需要經驗模態分解？',
+      introP1: '傅立葉轉換背後有兩個假設：訊號是線性的，而且是穩態的——它可以攤成一組振幅固定、' +
+               '頻率固定、從頭到尾都存在的正弦波。睡眠腦波兩個假設都不滿足：一個睡眠紡錘波只出現半秒到兩秒，' +
+               '一個 K 複合波是單次的瞬變事件，慢波的頻率會隨著睡眠變深而往下漂移，' +
+               '一次呼吸中止則是一段規律突然消失、過一陣子又回來。',
+      introP2: '把這樣的訊號丟進頻譜，得到的是整段記錄的平均：你知道裡面有哪些頻率，' +
+               '卻不知道它們什麼時候出現、當下有多強。可是睡眠判讀問的幾乎都是後者——' +
+               '紡錘波有多密、K 複合波落在哪一秒、呼吸中止持續多久。時間被抹平，問題本身也就不見了。',
+      introP3: '黃鍔院士在 1998 年提出的經驗模態分解走的是相反的路：不預設任何基底函數，' +
+               '直接從資料自己的局部極值出發。它反覆用上下包絡線的中線，把訊號裡跑得最快的那一層「篩」出來，' +
                '剩下的殘量再篩一次，直到只剩下趨勢。每一層叫做本質模態函數，' +
-               '它們的振幅和頻率都可以隨時間改變——所以瞬時頻率才有物理意義。',
-      introP3: '底下三個分頁，由淺入深：先看篩選怎麼一步步進行，再看五個睡眠期分解出什麼，' +
-               '最後把傅立葉頻譜和希爾伯特譜並排，看它們對「時間」的態度差在哪裡。',
+               '它的振幅和頻率都可以隨時間改變——這正是瞬時頻率能有物理意義的前提。',
+      introP4: '底下八個分頁由淺入深：先看極值與包絡線這兩個最基本的零件，再走完一次完整的篩選；' +
+               '接著自己組一段訊號、看五個睡眠期分解出什麼；然後把傅立葉頻譜和希爾伯特譜並排，' +
+               '看它們對「時間」的態度差在哪裡；最後是模態混合這個已知弱點，以及論文上的實際結果。',
 
       t1: '一、篩選演算法',
       t2: '二、五個睡眠期',
@@ -227,18 +233,25 @@
       stripRight: 'Signal and its intrinsic mode functions, fastest at the top',
 
       introEyebrow: 'Starting point',
-      introTitle: 'Fourier assumes a stationary world. Sleep is not one.',
-      introP1: 'Fourier analysis spreads a signal into sinusoids that are present forever at a fixed amplitude. ' +
-               'That is fine for stationary data, but everything interesting about sleep EEG is a question of when: ' +
-               'a spindle lasts under a second, a K-complex is a single event, an apnoea is a rhythm that suddenly stops. ' +
-               'Flatten those into a spectrum and you throw away the moment they happened.',
-      introP2: 'EMD takes another route. It repeatedly sifts out the fastest layer of the signal using the mean of the ' +
-               'upper and lower envelopes, then sifts the remainder again, until only a trend is left. Each layer is an ' +
-               'intrinsic mode function, and both its amplitude and its frequency may vary with time — which is exactly ' +
-               'what makes an instantaneous frequency physically meaningful.',
-      introP3: 'The three tabs below go from the mechanism outward: first how one sifting pass actually proceeds, ' +
-               'then what five sleep stages decompose into, and finally the Fourier spectrum and the Hilbert spectrum ' +
-               'side by side, so you can watch them disagree about time.',
+      introTitle: 'Why empirical mode decomposition?',
+      introP1: 'The Fourier transform rests on two assumptions: that the signal is linear, and that it is stationary — ' +
+               'that it can be spread into sinusoids of fixed amplitude and fixed frequency, present from beginning to end. ' +
+               'Sleep EEG satisfies neither. A spindle lasts between half a second and two seconds, a K-complex is a ' +
+               'single transient, the slow waves drift downward in frequency as sleep deepens, and an apnoea is a rhythm ' +
+               'that stops and then returns.',
+      introP2: 'Put a signal like that through a spectrum and what comes back is an average over the whole recording: ' +
+               'you learn which frequencies are present, but not when they appeared or how strong they were at that moment. ' +
+               'Almost every question in sleep scoring is the second kind — how dense the spindles are, which second the ' +
+               'K-complex falls on, how long the apnoea lasted. Flatten time and the question itself disappears.',
+      introP3: 'The empirical mode decomposition Norden E. Huang proposed in 1998 goes the other way: it assumes no basis ' +
+               'functions at all and starts from the local extrema of the data itself. It repeatedly sifts out the fastest ' +
+               'layer using the mean of the upper and lower envelopes, then sifts the remainder again, until only a trend ' +
+               'is left. Each layer is an intrinsic mode function, and both its amplitude and its frequency may vary with ' +
+               'time — which is what lets an instantaneous frequency mean anything physical.',
+      introP4: 'The eight tabs below work outward from the mechanism: first extrema and envelopes, the two smallest parts, ' +
+               'then one full sifting pass step by step; then a signal you build yourself, and what five sleep stages ' +
+               'decompose into; then the Fourier and Hilbert spectra side by side, so you can watch them disagree about ' +
+               'time; and finally mode mixing, the known weak point, together with what the papers actually report.',
 
       t1: '1 · The sifting algorithm',
       t2: '2 · Five sleep stages',
