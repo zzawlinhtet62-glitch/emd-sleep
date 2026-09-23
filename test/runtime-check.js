@@ -46,11 +46,20 @@ window.addEventListener('load', function () { setTimeout(function () {
   var w = document.getElementById('t3Sweep');
   var s0 = w.textContent; w.click(); var s1 = w.textContent; w.click();
   rep.sweepToggles = s0 !== s1 && w.textContent === s0;
-  // language round trip
-  var b = document.getElementById('langBtn');
-  var lang0 = document.documentElement.lang; b.click();
-  var lang1 = document.documentElement.lang; b.click();
-  rep.langRoundTrip = lang0 !== lang1 && document.documentElement.lang === lang0;
+  // language switch: both halves present, exactly one lit, round trips
+  var zh = document.querySelector('#langSw .langopt[data-lang="zh"]');
+  var en = document.querySelector('#langSw .langopt[data-lang="en"]');
+  rep.langBoth = !!zh && !!en;
+  var lang0 = document.documentElement.lang;
+  en.click();
+  var lang1 = document.documentElement.lang;
+  rep.langLit = en.getAttribute('aria-pressed') === 'true' &&
+                zh.getAttribute('aria-pressed') === 'false';
+  try { rep.langStored = localStorage.getItem('emd-lang-v3') === 'en'; }
+  catch (e) { rep.langStored = true; }
+  zh.click();
+  rep.langRoundTrip = lang0 !== lang1 && document.documentElement.lang === lang0 &&
+                      zh.getAttribute('aria-pressed') === 'true';
   rep.err = window.__err;
   var d = document.createElement('div'); d.id = '__probe';
   d.textContent = JSON.stringify(rep);
@@ -88,7 +97,10 @@ Object.keys(rep.tabs).forEach(k => {
 check('the hero strip is sized and drawing', rep.heroW > 10, 'canvas width = ' + rep.heroW);
 check('chapter 03 auto-play toggles both ways', rep.autoToggles);
 check('chapter 06 auto-sweep toggles both ways', rep.sweepToggles);
-check('the language button round-trips', rep.langRoundTrip);
+check('the language switch offers both languages', rep.langBoth);
+check('the language switch lights only the current language', rep.langLit);
+check('the chosen language is remembered', rep.langStored);
+check('the language switch round-trips', rep.langRoundTrip);
 
 console.log(bad ? `\n${bad} problem(s)` : '\nruntime checks passed');
 process.exit(bad ? 1 : 0);

@@ -101,6 +101,27 @@ h3 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
 .ghost:hover { color: var(--text); border-color: var(--text-dim); }
 .ghost:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+/* the language switch: both choices visible, the current one lit,
+   so you can see what the page offers without clicking to find out */
+.langsw {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--haze); border-radius: var(--radius);
+  overflow: hidden;
+}
+.langopt {
+  appearance: none; background: none; cursor: pointer; border: 0;
+  color: var(--text-dim); font: 500 .8rem/1 var(--sans);
+  padding: 7px 11px; letter-spacing: .03em;
+  transition: color .15s ease, background-color .15s ease;
+}
+.langopt + .langopt { border-left: 1px solid var(--haze); }
+.langopt:hover { color: var(--text); }
+.langopt:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.langopt[aria-pressed="true"] {
+  color: var(--night); background: var(--trace); cursor: default;
+}
+@media (prefers-reduced-motion: reduce) { .langopt { transition: none; } }
+
 /* ---------- hero ---------- */
 .hero { padding: 64px 0 40px; border-bottom: 1px solid var(--haze); }
 .hero h1 { font-size: clamp(2rem, 1.3rem + 3vw, 3.2rem); margin: 0 0 1rem; max-width: 20ch; }

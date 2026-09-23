@@ -113,6 +113,27 @@ h3 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
 .ghost:hover { color: var(--text); border-color: var(--text-dim); }
 .ghost:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+/* the language switch: both choices visible, the current one lit,
+   so you can see what the page offers without clicking to find out */
+.langsw {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--haze); border-radius: var(--radius);
+  overflow: hidden;
+}
+.langopt {
+  appearance: none; background: none; cursor: pointer; border: 0;
+  color: var(--text-dim); font: 500 .8rem/1 var(--sans);
+  padding: 7px 11px; letter-spacing: .03em;
+  transition: color .15s ease, background-color .15s ease;
+}
+.langopt + .langopt { border-left: 1px solid var(--haze); }
+.langopt:hover { color: var(--text); }
+.langopt:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.langopt[aria-pressed="true"] {
+  color: var(--night); background: var(--trace); cursor: default;
+}
+@media (prefers-reduced-motion: reduce) { .langopt { transition: none; } }
+
 /* ---------- hero ---------- */
 .hero { padding: 64px 0 40px; border-bottom: 1px solid var(--haze); }
 .hero h1 { font-size: clamp(2rem, 1.3rem + 3vw, 3.2rem); margin: 0 0 1rem; max-width: 20ch; }
@@ -351,7 +372,10 @@ footer p { max-width: var(--measure); }
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span data-i18n="brand">經驗模態分解</span><span data-i18n="brandSub">整夜記錄</span></div>
-    <button class="ghost" id="langBtn" type="button">EN</button>
+    <div class="langsw" id="langSw" role="group" aria-label="Language — 語言">
+      <button class="langopt" type="button" data-lang="zh" lang="zh-Hant" aria-pressed="true">中文</button>
+      <button class="langopt" type="button" data-lang="en" lang="en" aria-pressed="false">EN</button>
+    </div>
     <button class="ghost" id="themeBtn" type="button">明亮</button>
   </div>
 </header>
@@ -1709,8 +1733,8 @@ footer p { max-width: var(--measure); }
       htmlLang: 'zh-Hant',
       brand: '經驗模態分解',
       brandSub: '整夜記錄',
-      langBtn: 'EN',
-      langTitle: 'Switch to English',
+      langCurrent: '目前的語言',
+      langSwitch: '切換語言',
       themeBtn: '明亮',
       themeBtnDark: '暗色',
 
@@ -1910,8 +1934,8 @@ footer p { max-width: var(--measure); }
       htmlLang: 'en',
       brand: 'Empirical Mode Decomposition',
       brandSub: 'Overnight Recording',
-      langBtn: '中',
-      langTitle: '切換為中文',
+      langCurrent: 'Current language',
+      langSwitch: 'Switch language',
       themeBtn: 'Light',
       themeBtnDark: 'Dark',
 
@@ -2551,26 +2575,28 @@ footer p { max-width: var(--measure); }
   const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
   /* ---------- language & theme ------------------------------ */
+  const LANG_KEY = 'emd-lang-v3';
   let LANG = 'zh';
   let S = I18N.STR.zh;
 
   function initPrefs() {
     const q = (location.search.match(/[?&]lang=(zh|en)/) || [])[1];
-    if (q) LANG = q;
     try {
-      /* The language is not remembered at all. Storing it — in
-         localStorage or even sessionStorage — meant that a single
-         click on EN could make the site look permanently English on
-         a later visit, which is never what was wanted. Every load
-         starts in Chinese; ?lang=en is honoured so an English
-         version can still be linked to. Old stored values are
-         cleared so they cannot resurface. */
+      /* The switch now shows both choices, so a stored language can
+         no longer look like a page that is stuck in English — the
+         lit half always says which one you are reading. A fresh key
+         is used so the values left by the earlier, confusing
+         behaviour cannot resurface; the old ones are cleared. */
       localStorage.removeItem('emd-lang');
       localStorage.removeItem('emd-lang-v2');
       sessionStorage.removeItem('emd-lang');
+      const v = localStorage.getItem(LANG_KEY);
+      if (v === 'zh' || v === 'en') LANG = v;
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
+    /* an explicit ?lang= in the address wins over what was stored */
+    if (q) LANG = q;
     S = I18N.STR[LANG];
   }
   function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -3528,8 +3554,11 @@ footer p { max-width: var(--measure); }
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    $('#langBtn').textContent = S.langBtn;
-    $('#langBtn').title = S.langTitle;
+    $$('#langSw .langopt').forEach(b => {
+      const on = b.dataset.lang === LANG;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = on ? S.langCurrent : S.langSwitch;
+    });
     $('#t1Auto').textContent = T1AUTO.timer ? S.p1AutoStop : S.p1Auto;
     $('#t3Sweep').textContent = T3SWEEP.raf ? S.p3SweepStop : S.p3Sweep;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
@@ -3592,10 +3621,14 @@ footer p { max-width: var(--measure); }
     tmCompute();
 
     /* ---- top bar ---- */
-    $('#langBtn').addEventListener('click', () => {
-      LANG = LANG === 'zh' ? 'en' : 'zh';
-      /* deliberately not stored: see initPrefs */
-      applyLang();
+    $$('#langSw .langopt').forEach(b => {
+      b.addEventListener('click', () => {
+        const next = b.dataset.lang;
+        if (next === LANG) return;
+        LANG = next;
+        save(LANG_KEY, LANG);
+        applyLang();
+      });
     });
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';

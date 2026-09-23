@@ -14,26 +14,28 @@
   const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
   /* ---------- language & theme ------------------------------ */
+  const LANG_KEY = 'emd-lang-v3';
   let LANG = 'zh';
   let S = I18N.STR.zh;
 
   function initPrefs() {
     const q = (location.search.match(/[?&]lang=(zh|en)/) || [])[1];
-    if (q) LANG = q;
     try {
-      /* The language is not remembered at all. Storing it — in
-         localStorage or even sessionStorage — meant that a single
-         click on EN could make the site look permanently English on
-         a later visit, which is never what was wanted. Every load
-         starts in Chinese; ?lang=en is honoured so an English
-         version can still be linked to. Old stored values are
-         cleared so they cannot resurface. */
+      /* The switch now shows both choices, so a stored language can
+         no longer look like a page that is stuck in English — the
+         lit half always says which one you are reading. A fresh key
+         is used so the values left by the earlier, confusing
+         behaviour cannot resurface; the old ones are cleared. */
       localStorage.removeItem('emd-lang');
       localStorage.removeItem('emd-lang-v2');
       sessionStorage.removeItem('emd-lang');
+      const v = localStorage.getItem(LANG_KEY);
+      if (v === 'zh' || v === 'en') LANG = v;
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
+    /* an explicit ?lang= in the address wins over what was stored */
+    if (q) LANG = q;
     S = I18N.STR[LANG];
   }
   function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -991,8 +993,11 @@
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    $('#langBtn').textContent = S.langBtn;
-    $('#langBtn').title = S.langTitle;
+    $$('#langSw .langopt').forEach(b => {
+      const on = b.dataset.lang === LANG;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = on ? S.langCurrent : S.langSwitch;
+    });
     $('#t1Auto').textContent = T1AUTO.timer ? S.p1AutoStop : S.p1Auto;
     $('#t3Sweep').textContent = T3SWEEP.raf ? S.p3SweepStop : S.p3Sweep;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
@@ -1055,10 +1060,14 @@
     tmCompute();
 
     /* ---- top bar ---- */
-    $('#langBtn').addEventListener('click', () => {
-      LANG = LANG === 'zh' ? 'en' : 'zh';
-      /* deliberately not stored: see initPrefs */
-      applyLang();
+    $$('#langSw .langopt').forEach(b => {
+      b.addEventListener('click', () => {
+        const next = b.dataset.lang;
+        if (next === LANG) return;
+        LANG = next;
+        save(LANG_KEY, LANG);
+        applyLang();
+      });
     });
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';

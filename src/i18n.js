@@ -11,8 +11,8 @@
       htmlLang: 'zh-Hant',
       brand: '經驗模態分解',
       brandSub: '整夜記錄',
-      langBtn: 'EN',
-      langTitle: 'Switch to English',
+      langCurrent: '目前的語言',
+      langSwitch: '切換語言',
       themeBtn: '明亮',
       themeBtnDark: '暗色',
 
@@ -212,8 +212,8 @@
       htmlLang: 'en',
       brand: 'Empirical Mode Decomposition',
       brandSub: 'Overnight Recording',
-      langBtn: '中',
-      langTitle: '切換為中文',
+      langCurrent: 'Current language',
+      langSwitch: 'Switch language',
       themeBtn: 'Light',
       themeBtnDark: 'Dark',
 
