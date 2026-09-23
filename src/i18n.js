@@ -212,7 +212,7 @@
       htmlLang: 'en',
       brand: 'Empirical Mode Decomposition',
       brandSub: 'Overnight Recording',
-      langBtn: '中',
+      langBtn: '中文',
       langTitle: '切換為中文',
       themeBtn: 'Light',
       themeBtnDark: 'Dark',
