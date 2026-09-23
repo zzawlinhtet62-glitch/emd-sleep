@@ -18,16 +18,19 @@
   let S = I18N.STR.zh;
 
   function initPrefs() {
+    const q = (location.search.match(/[?&]lang=(zh|en)/) || [])[1];
+    if (q) LANG = q;
     try {
-      /* The language is remembered for the visit only, in
-         sessionStorage. Persisting it across visits meant that one
-         click on EN made the site look permanently English, which
-         is not what anyone wanted. Any older stored value is
-         cleared here. */
-      const l = sessionStorage.getItem('emd-lang');
-      if (l === 'zh' || l === 'en') LANG = l;
+      /* The language is not remembered at all. Storing it — in
+         localStorage or even sessionStorage — meant that a single
+         click on EN could make the site look permanently English on
+         a later visit, which is never what was wanted. Every load
+         starts in Chinese; ?lang=en is honoured so an English
+         version can still be linked to. Old stored values are
+         cleared so they cannot resurface. */
       localStorage.removeItem('emd-lang');
       localStorage.removeItem('emd-lang-v2');
+      sessionStorage.removeItem('emd-lang');
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
@@ -1054,7 +1057,7 @@
     /* ---- top bar ---- */
     $('#langBtn').addEventListener('click', () => {
       LANG = LANG === 'zh' ? 'en' : 'zh';
-      try { sessionStorage.setItem('emd-lang', LANG); } catch (e) {}
+      /* deliberately not stored: see initPrefs */
       applyLang();
     });
     $('#themeBtn').addEventListener('click', () => {
