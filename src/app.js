@@ -19,8 +19,12 @@
 
   function initPrefs() {
     try {
-      const l = localStorage.getItem('emd-lang');
+      /* The key is versioned: bumping it retires any language a visitor
+         had stored before, so everyone lands on the Chinese default
+         again and only a deliberate click changes it. */
+      const l = localStorage.getItem('emd-lang-v2');
       if (l === 'zh' || l === 'en') LANG = l;
+      localStorage.removeItem('emd-lang');
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
@@ -944,7 +948,7 @@
     $$('#langToggle .seg').forEach(b => b.addEventListener('click', () => {
       if (b.dataset.lang === LANG) return;
       LANG = b.dataset.lang;
-      save('emd-lang', LANG);
+      save('emd-lang-v2', LANG);
       applyLang();
     }));
     $('#themeBtn').addEventListener('click', () => {
