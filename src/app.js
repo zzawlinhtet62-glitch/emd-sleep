@@ -19,12 +19,15 @@
 
   function initPrefs() {
     try {
-      /* The key is versioned: bumping it retires any language a visitor
-         had stored before, so everyone lands on the Chinese default
-         again and only a deliberate click changes it. */
-      const l = localStorage.getItem('emd-lang-v2');
+      /* The language is remembered for the visit only, in
+         sessionStorage. Persisting it across visits meant that one
+         click on EN made the site look permanently English, which
+         is not what anyone wanted. Any older stored value is
+         cleared here. */
+      const l = sessionStorage.getItem('emd-lang');
       if (l === 'zh' || l === 'en') LANG = l;
       localStorage.removeItem('emd-lang');
+      localStorage.removeItem('emd-lang-v2');
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
@@ -208,8 +211,9 @@
     reduced: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   };
 
-  const HERO = { rows: [], period: 0, raf: 0, t0: 0, offset: 0 };
-  const HERO_SPEED = 42;          /* samples per second — one loop is ~49 s */
+  const HERO = { rows: [], scale: [], period: 0, raf: 0, t0: 0, offset: 0 };
+  const HERO_SPEED = 60;          /* samples per second: the 10 s window is
+                                     replaced every ~17 s, one loop is ~137 s */
 
   function heroCompute() {
     const sig = SIGNALS.heroSignal();
@@ -220,11 +224,23 @@
        the buffer edges, and because the input repeats sample for
        sample, wrapping it leaves no visible seam: the step across
        the wrap stays inside the 95th percentile of the ordinary
-       sample-to-sample steps of every row. */
+       sample-to-sample steps of every row. The period is long
+       enough, and its content varied enough, that the trace does
+       not read as a loop: slow waves wax and wane, spindles and
+       K-complexes come and go. */
     HERO.rows = src.map(r => {
       const out = new Float64Array(P);
       for (let i = 0; i < P; i++) out[i] = r[P + i];
       return out;
+    });
+    /* Scale each row by its 97th percentile rather than its maximum.
+       A single K-complex reaches 70 µV and would otherwise flatten
+       everything else into a straight line; chart paper clips the
+       rare large deflection instead, and so do we. */
+    HERO.scale = HERO.rows.map(r => {
+      const mag = Array.prototype.map.call(r, Math.abs).sort((a, b) => a - b);
+      const p97 = mag[Math.floor(mag.length * 0.97)] || mag[mag.length - 1] || 1;
+      return p97;
     });
     HERO.period = P;
   }
@@ -257,20 +273,21 @@
     }
     ctx.restore();
 
+    const limit = rowH * 0.46;
     rows.forEach((r, k) => {
       const mid = k * rowH + rowH / 2;
-      let mx = 0;
-      for (let i = 0; i < P; i++) { const a = Math.abs(r[i]); if (a > mx) mx = a; }
-      const sc = mx > 0 ? (rowH * 0.40) / mx : 0;
+      const sc = (rowH * 0.34) / (HERO.scale[k] || 1);
       ctx.save();
       ctx.strokeStyle = COL.trace;
-      ctx.globalAlpha = k === 0 ? 1 : 0.55;
+      ctx.globalAlpha = k === 0 ? 1 : 0.6;
       ctx.lineWidth = k === 0 ? 1.5 : 1.1;
       ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let px = 0; px <= width; px++) {
         const idx = Math.floor(offset + px * step) % P;
-        const y = mid - r[idx] * sc;
+        let d = r[idx] * sc;
+        if (d > limit) d = limit; else if (d < -limit) d = -limit;
+        const y = mid - d;
         if (px) ctx.lineTo(padL + px, y); else ctx.moveTo(padL + px, y);
       }
       ctx.stroke();
@@ -1037,7 +1054,7 @@
     /* ---- top bar ---- */
     $('#langBtn').addEventListener('click', () => {
       LANG = LANG === 'zh' ? 'en' : 'zh';
-      save('emd-lang-v2', LANG);
+      try { sessionStorage.setItem('emd-lang', LANG); } catch (e) {}
       applyLang();
     });
     $('#themeBtn').addEventListener('click', () => {

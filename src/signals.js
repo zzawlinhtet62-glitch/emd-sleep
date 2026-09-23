@@ -175,34 +175,70 @@
   }
 
   /* ---------- the scrolling hero strip -----------------------
-     Every frequency is an exact integer multiple of 1/period and
-     the noise buffer is tiled, so the signal repeats sample for
-     sample. Three periods are generated and only the middle one
-     is displayed: that way the slice being scrolled is free of
-     the end effects at the buffer edges, and the wrap point is
-     seamless.                                                   */
-  const HERO_PERIOD = 2048;
+     One period is built and then tiled three times, so the buffer
+     repeats sample for sample however irregular its content looks.
+     Every continuous component is an integer multiple of 1/period
+     (including the slow amplitude modulation, which is a product
+     of two harmonics and therefore still harmonic), and the noise
+     and the transient graphoelements live inside that one period.
+     Only the middle period is displayed, which keeps the visible
+     slice clear of the end effects at the buffer edges.
+     The point of the events is that the trace should not look the
+     same twice as it goes past: slow waves wax and wane, spindles
+     and K-complexes arrive and pass.                            */
+  const HERO_PERIOD = 8192;                       /* 81.92 s at 100 Hz */
 
   function heroSignal() {
     const fs = SLEEP_FS, P = HERO_PERIOD, n = P * 3;
-    const f0 = fs / P;                       /* fundamental */
-    const parts = [
-      { k: 16, a: 95, ph: 0 },
-      { k: 35, a: 32, ph: 1.0 },
-      { k: 9, a: 22, ph: 2.6 },
-      { k: 113, a: 7, ph: 0.3 },
-      { k: 225, a: 3, ph: 1.7 }
+    const f0 = fs / P;                            /* 0.012207 Hz */
+    const one = new Float64Array(P);
+    const nz = gaussNoise(P, 2.2, 7331);
+
+    /* continuous background, every k an integer */
+    const slow = [
+      { k: 64, a: 74, ph: 0.0 },                  /* 0.781 Hz */
+      { k: 136, a: 26, ph: 1.0 },                 /* 1.660 Hz */
+      { k: 27, a: 19, ph: 2.6 }                   /* 0.330 Hz */
     ];
-    const nz = gaussNoise(P, 2, 7331);       /* one period of noise, tiled */
-    const t = timeAxis(n, fs), y = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const ti = (i % P) / fs;
+    const fast = [
+      { k: 451, a: 6, ph: 0.3 },                  /* 5.505 Hz */
+      { k: 893, a: 3, ph: 1.7 }                   /* 10.900 Hz */
+    ];
+    /* the slow band breathes, so the page never looks uniform */
+    const breathe = { k: 5, depth: 0.45 };        /* 0.061 Hz, ~16 s */
+
+    /* graphoelements, placed well away from the wrap */
+    const spindles = [
+      { t: 12.5, f: 13.1, a: 30 },
+      { t: 31.0, f: 12.6, a: 26 },
+      { t: 58.2, f: 13.4, a: 32 }
+    ];
+    const kComplexes = [22.0, 47.5, 69.0];
+
+    for (let i = 0; i < P; i++) {
+      const ti = i / fs;
+      const env = 1 + breathe.depth * Math.sin(2 * Math.PI * breathe.k * f0 * ti);
       let v = 0;
-      for (let j = 0; j < parts.length; j++) {
-        v += parts[j].a * Math.sin(2 * Math.PI * parts[j].k * f0 * ti + parts[j].ph);
+      for (let j = 0; j < slow.length; j++) {
+        v += env * slow[j].a * Math.sin(2 * Math.PI * slow[j].k * f0 * ti + slow[j].ph);
       }
-      y[i] = v + nz[i % P];
+      for (let j = 0; j < fast.length; j++) {
+        v += fast[j].a * Math.sin(2 * Math.PI * fast[j].k * f0 * ti + fast[j].ph);
+      }
+      for (let j = 0; j < spindles.length; j++) {
+        const sp = spindles[j];
+        v += sp.a * gauss(ti, sp.t, 0.42) * Math.sin(2 * Math.PI * sp.f * (ti - sp.t));
+      }
+      for (let j = 0; j < kComplexes.length; j++) {
+        const kt = kComplexes[j];
+        v += -70 * gauss(ti, kt, 0.13);
+        v += 46 * gauss(ti, kt + 0.34, 0.26);
+      }
+      one[i] = v + nz[i];
     }
+
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) y[i] = one[i % P];
     return { t, y, fs, n, period: P };
   }
 

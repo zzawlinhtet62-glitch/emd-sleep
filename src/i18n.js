@@ -19,7 +19,7 @@
       heroTitle: '把一夜的腦波，拆成它自己的節奏',
       heroLede: '經驗模態分解（EMD）不預設任何基底函數。它只問訊號自己：局部的起伏有多快？' +
                 '這個網站不是在講解演算法，而是把演算法交到你手上——每一條曲線都是你按下按鈕的當下，在瀏覽器裡算出來的。',
-      stripLeft: '合成慢波睡眠腦波，嚴格週期化以便無縫捲動 · fs = 100 Hz · 視窗 10.24 s',
+      stripLeft: '合成睡眠腦波：慢波振幅起伏，中間夾著紡錘波與 K 複合波 · fs = 100 Hz · 視窗 10.24 s',
       stripRight: '原始訊號與其本質模態函數（由上而下，頻率遞減）',
 
       introEyebrow: '起點',
@@ -221,7 +221,7 @@
       heroLede: 'Empirical Mode Decomposition assumes no basis functions. It asks the signal itself: ' +
                 'how fast does this wiggle, right here? This page is not an explanation of the algorithm — ' +
                 'it hands you the algorithm. Every curve below is computed in your browser the moment you click.',
-      stripLeft: 'Synthetic slow-wave sleep EEG, made exactly periodic so it scrolls seamlessly · fs = 100 Hz · 10.24 s window',
+      stripLeft: 'Synthetic sleep EEG: slow waves waxing and waning, with spindles and K-complexes passing through · fs = 100 Hz · 10.24 s window',
       stripRight: 'Signal and its intrinsic mode functions, fastest at the top',
 
       introEyebrow: 'Starting point',

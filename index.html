@@ -1543,34 +1543,70 @@ footer p { max-width: var(--measure); }
   }
 
   /* ---------- the scrolling hero strip -----------------------
-     Every frequency is an exact integer multiple of 1/period and
-     the noise buffer is tiled, so the signal repeats sample for
-     sample. Three periods are generated and only the middle one
-     is displayed: that way the slice being scrolled is free of
-     the end effects at the buffer edges, and the wrap point is
-     seamless.                                                   */
-  const HERO_PERIOD = 2048;
+     One period is built and then tiled three times, so the buffer
+     repeats sample for sample however irregular its content looks.
+     Every continuous component is an integer multiple of 1/period
+     (including the slow amplitude modulation, which is a product
+     of two harmonics and therefore still harmonic), and the noise
+     and the transient graphoelements live inside that one period.
+     Only the middle period is displayed, which keeps the visible
+     slice clear of the end effects at the buffer edges.
+     The point of the events is that the trace should not look the
+     same twice as it goes past: slow waves wax and wane, spindles
+     and K-complexes arrive and pass.                            */
+  const HERO_PERIOD = 8192;                       /* 81.92 s at 100 Hz */
 
   function heroSignal() {
     const fs = SLEEP_FS, P = HERO_PERIOD, n = P * 3;
-    const f0 = fs / P;                       /* fundamental */
-    const parts = [
-      { k: 16, a: 95, ph: 0 },
-      { k: 35, a: 32, ph: 1.0 },
-      { k: 9, a: 22, ph: 2.6 },
-      { k: 113, a: 7, ph: 0.3 },
-      { k: 225, a: 3, ph: 1.7 }
+    const f0 = fs / P;                            /* 0.012207 Hz */
+    const one = new Float64Array(P);
+    const nz = gaussNoise(P, 2.2, 7331);
+
+    /* continuous background, every k an integer */
+    const slow = [
+      { k: 64, a: 74, ph: 0.0 },                  /* 0.781 Hz */
+      { k: 136, a: 26, ph: 1.0 },                 /* 1.660 Hz */
+      { k: 27, a: 19, ph: 2.6 }                   /* 0.330 Hz */
     ];
-    const nz = gaussNoise(P, 2, 7331);       /* one period of noise, tiled */
-    const t = timeAxis(n, fs), y = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const ti = (i % P) / fs;
+    const fast = [
+      { k: 451, a: 6, ph: 0.3 },                  /* 5.505 Hz */
+      { k: 893, a: 3, ph: 1.7 }                   /* 10.900 Hz */
+    ];
+    /* the slow band breathes, so the page never looks uniform */
+    const breathe = { k: 5, depth: 0.45 };        /* 0.061 Hz, ~16 s */
+
+    /* graphoelements, placed well away from the wrap */
+    const spindles = [
+      { t: 12.5, f: 13.1, a: 30 },
+      { t: 31.0, f: 12.6, a: 26 },
+      { t: 58.2, f: 13.4, a: 32 }
+    ];
+    const kComplexes = [22.0, 47.5, 69.0];
+
+    for (let i = 0; i < P; i++) {
+      const ti = i / fs;
+      const env = 1 + breathe.depth * Math.sin(2 * Math.PI * breathe.k * f0 * ti);
       let v = 0;
-      for (let j = 0; j < parts.length; j++) {
-        v += parts[j].a * Math.sin(2 * Math.PI * parts[j].k * f0 * ti + parts[j].ph);
+      for (let j = 0; j < slow.length; j++) {
+        v += env * slow[j].a * Math.sin(2 * Math.PI * slow[j].k * f0 * ti + slow[j].ph);
       }
-      y[i] = v + nz[i % P];
+      for (let j = 0; j < fast.length; j++) {
+        v += fast[j].a * Math.sin(2 * Math.PI * fast[j].k * f0 * ti + fast[j].ph);
+      }
+      for (let j = 0; j < spindles.length; j++) {
+        const sp = spindles[j];
+        v += sp.a * gauss(ti, sp.t, 0.42) * Math.sin(2 * Math.PI * sp.f * (ti - sp.t));
+      }
+      for (let j = 0; j < kComplexes.length; j++) {
+        const kt = kComplexes[j];
+        v += -70 * gauss(ti, kt, 0.13);
+        v += 46 * gauss(ti, kt + 0.34, 0.26);
+      }
+      one[i] = v + nz[i];
     }
+
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) y[i] = one[i % P];
     return { t, y, fs, n, period: P };
   }
 
@@ -1681,7 +1717,7 @@ footer p { max-width: var(--measure); }
       heroTitle: '把一夜的腦波，拆成它自己的節奏',
       heroLede: '經驗模態分解（EMD）不預設任何基底函數。它只問訊號自己：局部的起伏有多快？' +
                 '這個網站不是在講解演算法，而是把演算法交到你手上——每一條曲線都是你按下按鈕的當下，在瀏覽器裡算出來的。',
-      stripLeft: '合成慢波睡眠腦波，嚴格週期化以便無縫捲動 · fs = 100 Hz · 視窗 10.24 s',
+      stripLeft: '合成睡眠腦波：慢波振幅起伏，中間夾著紡錘波與 K 複合波 · fs = 100 Hz · 視窗 10.24 s',
       stripRight: '原始訊號與其本質模態函數（由上而下，頻率遞減）',
 
       introEyebrow: '起點',
@@ -1883,7 +1919,7 @@ footer p { max-width: var(--measure); }
       heroLede: 'Empirical Mode Decomposition assumes no basis functions. It asks the signal itself: ' +
                 'how fast does this wiggle, right here? This page is not an explanation of the algorithm — ' +
                 'it hands you the algorithm. Every curve below is computed in your browser the moment you click.',
-      stripLeft: 'Synthetic slow-wave sleep EEG, made exactly periodic so it scrolls seamlessly · fs = 100 Hz · 10.24 s window',
+      stripLeft: 'Synthetic sleep EEG: slow waves waxing and waning, with spindles and K-complexes passing through · fs = 100 Hz · 10.24 s window',
       stripRight: 'Signal and its intrinsic mode functions, fastest at the top',
 
       introEyebrow: 'Starting point',
@@ -2520,12 +2556,15 @@ footer p { max-width: var(--measure); }
 
   function initPrefs() {
     try {
-      /* The key is versioned: bumping it retires any language a visitor
-         had stored before, so everyone lands on the Chinese default
-         again and only a deliberate click changes it. */
-      const l = localStorage.getItem('emd-lang-v2');
+      /* The language is remembered for the visit only, in
+         sessionStorage. Persisting it across visits meant that one
+         click on EN made the site look permanently English, which
+         is not what anyone wanted. Any older stored value is
+         cleared here. */
+      const l = sessionStorage.getItem('emd-lang');
       if (l === 'zh' || l === 'en') LANG = l;
       localStorage.removeItem('emd-lang');
+      localStorage.removeItem('emd-lang-v2');
       const t = localStorage.getItem('emd-theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) { /* private mode: fall back to the defaults */ }
@@ -2709,8 +2748,9 @@ footer p { max-width: var(--measure); }
     reduced: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   };
 
-  const HERO = { rows: [], period: 0, raf: 0, t0: 0, offset: 0 };
-  const HERO_SPEED = 42;          /* samples per second — one loop is ~49 s */
+  const HERO = { rows: [], scale: [], period: 0, raf: 0, t0: 0, offset: 0 };
+  const HERO_SPEED = 60;          /* samples per second: the 10 s window is
+                                     replaced every ~17 s, one loop is ~137 s */
 
   function heroCompute() {
     const sig = SIGNALS.heroSignal();
@@ -2721,11 +2761,23 @@ footer p { max-width: var(--measure); }
        the buffer edges, and because the input repeats sample for
        sample, wrapping it leaves no visible seam: the step across
        the wrap stays inside the 95th percentile of the ordinary
-       sample-to-sample steps of every row. */
+       sample-to-sample steps of every row. The period is long
+       enough, and its content varied enough, that the trace does
+       not read as a loop: slow waves wax and wane, spindles and
+       K-complexes come and go. */
     HERO.rows = src.map(r => {
       const out = new Float64Array(P);
       for (let i = 0; i < P; i++) out[i] = r[P + i];
       return out;
+    });
+    /* Scale each row by its 97th percentile rather than its maximum.
+       A single K-complex reaches 70 µV and would otherwise flatten
+       everything else into a straight line; chart paper clips the
+       rare large deflection instead, and so do we. */
+    HERO.scale = HERO.rows.map(r => {
+      const mag = Array.prototype.map.call(r, Math.abs).sort((a, b) => a - b);
+      const p97 = mag[Math.floor(mag.length * 0.97)] || mag[mag.length - 1] || 1;
+      return p97;
     });
     HERO.period = P;
   }
@@ -2758,20 +2810,21 @@ footer p { max-width: var(--measure); }
     }
     ctx.restore();
 
+    const limit = rowH * 0.46;
     rows.forEach((r, k) => {
       const mid = k * rowH + rowH / 2;
-      let mx = 0;
-      for (let i = 0; i < P; i++) { const a = Math.abs(r[i]); if (a > mx) mx = a; }
-      const sc = mx > 0 ? (rowH * 0.40) / mx : 0;
+      const sc = (rowH * 0.34) / (HERO.scale[k] || 1);
       ctx.save();
       ctx.strokeStyle = COL.trace;
-      ctx.globalAlpha = k === 0 ? 1 : 0.55;
+      ctx.globalAlpha = k === 0 ? 1 : 0.6;
       ctx.lineWidth = k === 0 ? 1.5 : 1.1;
       ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let px = 0; px <= width; px++) {
         const idx = Math.floor(offset + px * step) % P;
-        const y = mid - r[idx] * sc;
+        let d = r[idx] * sc;
+        if (d > limit) d = limit; else if (d < -limit) d = -limit;
+        const y = mid - d;
         if (px) ctx.lineTo(padL + px, y); else ctx.moveTo(padL + px, y);
       }
       ctx.stroke();
@@ -3538,7 +3591,7 @@ footer p { max-width: var(--measure); }
     /* ---- top bar ---- */
     $('#langBtn').addEventListener('click', () => {
       LANG = LANG === 'zh' ? 'en' : 'zh';
-      save('emd-lang-v2', LANG);
+      try { sessionStorage.setItem('emd-lang', LANG); } catch (e) {}
       applyLang();
     });
     $('#themeBtn').addEventListener('click', () => {
