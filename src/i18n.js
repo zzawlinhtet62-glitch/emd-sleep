@@ -35,7 +35,7 @@
 
       t1: '一、篩選演算法',
       t2: '二、五個睡眠期',
-      t3: '三、傅立葉 vs 希爾伯特',
+      t3: '三、傅立葉對照希爾伯特',
 
       /* ---- tab 1 ---- */
       p1Title: '一次篩選，拆成七個畫面',
@@ -84,17 +84,18 @@
                '第 07 章有一個 12 Hz 的爆發被過零率讀成 25 Hz 的例子。',
       p2Noise: '加入雜訊',
       p2NoiseUnit: 'µV',
+      p2Peak: '峰值',
       stageNames: { wake: '清醒', n1: 'N1 淺睡', n2: 'N2', n3: 'N3 深睡', rem: 'REM' },
       stageDesc: {
-        wake: '8–13 Hz 的 alpha 節律為主，帶有緩慢的振幅調變（alpha 爆發），混入少量 19 Hz 的 beta。整體振幅偏低。',
-        n1: 'theta（約 6 Hz）逐漸接管，alpha 隨時間衰減。這是清醒與睡眠之間的過渡。',
+        wake: '8–13 Hz 的 α 波節律為主，帶有緩慢的振幅調變（α 波爆發），混入少量 19 Hz 的 β 波。整體振幅偏低。',
+        n1: 'θ 波（約 6 Hz）逐漸接管，α 波隨時間衰減。這是清醒與睡眠之間的過渡。',
         n2: '背景之上有兩個睡眠紡錘波（約 13 Hz，高斯窗約 0.9 秒）與一個 K 複合波（先一個尖銳負波，再一個較慢的正波）。這兩者是 N2 的判讀依據。',
         n3: '0.5–2 Hz 的大振幅慢波，峰值可達 150 µV。慢波活動的強度是深睡的量測指標。',
-        rem: '低振幅、頻率混雜，theta 之上疊著鋸齒波。腦波看起來接近清醒，但肌張力消失。'
+        rem: '低振幅、頻率混雜，θ 波之上疊著鋸齒波。腦波看起來接近清醒，但肌張力消失。'
       },
       p2Signal: '原始訊號',
       p2Residue: '殘量',
-      p2Band: { delta: 'delta', theta: 'theta', alpha: 'alpha', beta: 'beta', gamma: 'gamma', sub: '< 0.5 Hz' },
+      p2Band: { delta: 'δ 波', theta: 'θ 波', alpha: 'α 波', beta: 'β 波', gamma: 'γ 波', sub: '< 0.5 Hz' },
       p2NoiseNote: '把雜訊滑桿從 0 拉開：IMF1 的主頻會從 %1 Hz 跳到 %2 Hz，能量也跟著上升。' +
                    '雜訊被集中到最高頻的那一層，底下幾層幾乎沒受影響——' +
                    '這就是 EMD 可以用來移除偽跡的原因：丟掉 IMF1，再把剩下的加回去。',
@@ -289,6 +290,7 @@
                'chapter 07 has a 12 Hz burst train that reads as 25 Hz that way.',
       p2Noise: 'Added noise',
       p2NoiseUnit: 'µV',
+      p2Peak: 'peak',
       stageNames: { wake: 'Wake', n1: 'N1', n2: 'N2', n3: 'N3', rem: 'REM' },
       stageDesc: {
         wake: 'Dominated by 8–13 Hz alpha with slow amplitude modulation (alpha bursts) and a little 19 Hz beta. Low overall voltage.',

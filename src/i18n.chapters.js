@@ -14,7 +14,7 @@
       tab_sift: '03 篩選演算法',
       tab_lab: '04 訊號實驗室',
       tab_stage: '05 五個睡眠期',
-      tab_spec: '06 傅立葉 vs 希爾伯特',
+      tab_spec: '06 傅立葉對照希爾伯特',
       tab_mix: '07 模態混合與 EEMD',
       tab_paper: '08 論文案例',
 

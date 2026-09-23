@@ -507,7 +507,7 @@
 
     rows.forEach(r => {
       if (r.isSignal) {
-        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV peak';
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV ' + S.p2Peak;
       } else if (r.isResidue) {
         r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV';
       } else {
