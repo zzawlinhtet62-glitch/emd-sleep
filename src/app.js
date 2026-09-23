@@ -880,11 +880,8 @@
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    /* a two-state toggle, so which language is active is never in doubt */
-    $$('#langToggle .seg').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.lang === LANG));
-    });
-    $('#langToggle').title = S.langTitle;
+    $('#langBtn').textContent = S.langBtn;
+    $('#langBtn').title = S.langTitle;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
@@ -945,12 +942,11 @@
     tmCompute();
 
     /* ---- top bar ---- */
-    $$('#langToggle .seg').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.lang === LANG) return;
-      LANG = b.dataset.lang;
+    $('#langBtn').addEventListener('click', () => {
+      LANG = LANG === 'zh' ? 'en' : 'zh';
       save('emd-lang-v2', LANG);
       applyLang();
-    }));
+    });
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);

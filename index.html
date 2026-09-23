@@ -300,17 +300,6 @@ footer p { max-width: var(--measure); }
 #implList code { color: var(--trace); font-size: .86rem; }
 .hero-strip .plot-head { margin-bottom: 8px; }
 
-/* ---------- segmented language toggle ---------- */
-.seg-group { display: inline-flex; border: 1px solid var(--haze); border-radius: var(--radius); overflow: hidden; }
-.seg {
-  appearance: none; background: none; border: 0; cursor: pointer;
-  color: var(--text-dim); font: 500 .8rem/1 var(--sans); padding: 7px 11px; letter-spacing: .03em;
-}
-.seg + .seg { border-left: 1px solid var(--haze); }
-.seg:hover { color: var(--text); }
-.seg[aria-pressed="true"] { background: var(--haze); color: var(--text); }
-.seg:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
-
 .ctl-label { color: var(--text-dim); font-size: .85rem; margin-right: 2px; }
 .hint { color: var(--text-dim); font-size: .76rem; }
 
@@ -362,10 +351,7 @@ footer p { max-width: var(--measure); }
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span data-i18n="brand">經驗模態分解</span><span data-i18n="brandSub">整夜記錄</span></div>
-    <div class="seg-group" id="langToggle" role="group">
-      <button class="seg" type="button" data-lang="zh" aria-pressed="true">中</button>
-      <button class="seg" type="button" data-lang="en" aria-pressed="false">EN</button>
-    </div>
+    <button class="ghost" id="langBtn" type="button">EN</button>
     <button class="ghost" id="themeBtn" type="button">明亮</button>
   </div>
 </header>
@@ -3357,11 +3343,8 @@ footer p { max-width: var(--measure); }
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    /* a two-state toggle, so which language is active is never in doubt */
-    $$('#langToggle .seg').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.lang === LANG));
-    });
-    $('#langToggle').title = S.langTitle;
+    $('#langBtn').textContent = S.langBtn;
+    $('#langBtn').title = S.langTitle;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
@@ -3422,12 +3405,11 @@ footer p { max-width: var(--measure); }
     tmCompute();
 
     /* ---- top bar ---- */
-    $$('#langToggle .seg').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.lang === LANG) return;
-      LANG = b.dataset.lang;
+    $('#langBtn').addEventListener('click', () => {
+      LANG = LANG === 'zh' ? 'en' : 'zh';
       save('emd-lang-v2', LANG);
       applyLang();
-    }));
+    });
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);

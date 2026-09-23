@@ -288,17 +288,6 @@ footer p { max-width: var(--measure); }
 #implList code { color: var(--trace); font-size: .86rem; }
 .hero-strip .plot-head { margin-bottom: 8px; }
 
-/* ---------- segmented language toggle ---------- */
-.seg-group { display: inline-flex; border: 1px solid var(--haze); border-radius: var(--radius); overflow: hidden; }
-.seg {
-  appearance: none; background: none; border: 0; cursor: pointer;
-  color: var(--text-dim); font: 500 .8rem/1 var(--sans); padding: 7px 11px; letter-spacing: .03em;
-}
-.seg + .seg { border-left: 1px solid var(--haze); }
-.seg:hover { color: var(--text); }
-.seg[aria-pressed="true"] { background: var(--haze); color: var(--text); }
-.seg:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
-
 .ctl-label { color: var(--text-dim); font-size: .85rem; margin-right: 2px; }
 .hint { color: var(--text-dim); font-size: .76rem; }
 
