@@ -94,7 +94,7 @@
      extrapolating.  Skipping this makes the first and last ~10%
      of every envelope visibly wrong: the classic "end effect".  */
   const N_MIRROR = 2;
-  const CFG = { boundary: 'linear' };   /* 'linear' | 'mirror' */
+  const CFG = { boundary: 'linear' };   /* 'linear' | 'mirror' | 'none' */
 
   function takeRev(arr, from, count) {
     const out = [];
@@ -229,6 +229,16 @@
       }
       return { up: flat, lo: flat2 };
     }
+    if (CFG.boundary === 'none') {
+      /* no boundary treatment at all: the spline is built from the
+         extrema alone, so beyond the outermost ones it extrapolates
+         freely. Kept so the end effect can be shown rather than
+         merely described. */
+      const kx = { X: [], Y: [] }, kn = { X: [], Y: [] };
+      for (let i = 0; i < maxI.length; i++) { kx.X.push(maxI[i]); kx.Y.push(y[maxI[i]]); }
+      for (let i = 0; i < minI.length; i++) { kn.X.push(minI[i]); kn.Y.push(y[minI[i]]); }
+      return { up: splineAt(kx, n), lo: splineAt(kn, n) };
+    }
     if (CFG.boundary === 'linear') {
       return {
         up: splineAt(extendLinear(y, maxI, true), n),
@@ -350,6 +360,80 @@
     return { imfs, residue: r };
   }
 
+  /* ---------- 7b. EEMD ---------------------------------------
+     Ensemble EMD (Wu & Huang 2009). Each ensemble member is the
+     signal plus a fresh realisation of finite-amplitude white
+     noise; the members are decomposed independently and the
+     IMFs averaged index by index. The noise fills the gaps that
+     make an intermittent signal produce mode mixing, and it
+     cancels in the average.
+     The averaged IMFs no longer sum to the signal exactly, so
+     the residue returned here is y - sum(IMFs), which keeps the
+     reconstruction exact for display.                          */
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function eemd(y, opts) {
+    opts = opts || {};
+    const ensemble = Math.max(1, opts.ensemble || 40);
+    const maxImf = opts.maxImf || 8;
+    const ratio = opts.noiseRatio === undefined ? 0.2 : opts.noiseRatio;
+    const n = y.length;
+
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += y[i];
+    mean /= n;
+    let sd = 0;
+    for (let i = 0; i < n; i++) { const d = y[i] - mean; sd += d * d; }
+    sd = Math.sqrt(sd / n);
+    const amp = ratio * sd;
+
+    const acc = [];
+    for (let k = 0; k < maxImf; k++) acc.push(new Float64Array(n));
+    const hits = new Int32Array(maxImf);
+    const rnd = mulberry32(opts.seed === undefined ? 20260923 : opts.seed);
+    const work = new Float64Array(n);
+
+    for (let e = 0; e < ensemble; e++) {
+      for (let i = 0; i < n; i++) {
+        /* sum of four uniforms: close enough to Gaussian here */
+        const u = rnd() + rnd() + rnd() + rnd() - 2;
+        work[i] = y[i] + u * amp * 0.8660254;
+      }
+      const d = emd(work, maxImf);
+      for (let k = 0; k < d.imfs.length; k++) {
+        const c = d.imfs[k], a = acc[k];
+        for (let i = 0; i < n; i++) a[i] += c[i];
+        hits[k]++;
+      }
+    }
+
+    const imfs = [];
+    for (let k = 0; k < maxImf; k++) {
+      if (!hits[k]) break;
+      const a = acc[k];
+      for (let i = 0; i < n; i++) a[i] /= ensemble;
+      imfs.push(a);
+    }
+    /* trim trailing modes that almost every member failed to produce */
+    while (imfs.length > 1 && hits[imfs.length - 1] < ensemble * 0.5) imfs.pop();
+
+    const residue = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = y[i];
+      for (let k = 0; k < imfs.length; k++) s -= imfs[k][i];
+      residue[i] = s;
+    }
+    return { imfs, residue, ensemble, noiseAmp: amp };
+  }
+
   /* ---------- 8. FFT (iterative radix-2, in place) ------------ */
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
 
@@ -443,6 +527,29 @@
   function zeroCrossingFreq(x, fs) {
     return countZeroCrossings(x) * fs / (2 * x.length);
   }
+
+  /* Amplitude-weighted mean instantaneous frequency.
+     The zero-crossing rate is fine for a steady oscillation but
+     badly biased for an intermittent one: in the quiet stretches
+     of a bursty IMF, tiny residual ripple still crosses zero and
+     drags the estimate upward (a 12 Hz burst train reads as
+     25 Hz). Weighting by a^2 counts a sample only as far as it
+     carries energy, which is the physically meaningful measure
+     and the one the Hilbert spectrum is built on.              */
+  function meanFreq(x, fs) {
+    const h = hilbert(x, fs);
+    const n = x.length;
+    const lo = Math.min(20, Math.floor(n * 0.02));
+    let num = 0, den = 0;
+    for (let i = lo; i < n - lo; i++) {
+      const f = h.freq[i];
+      if (!(f > 0) || f > fs / 2) continue;
+      const w = h.amp[i] * h.amp[i];
+      num += w * f;
+      den += w;
+    }
+    return den > 0 ? num / den : 0;
+  }
   function peakAmp(x) {
     let m = 0;
     for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > m) m = a; }
@@ -502,9 +609,9 @@
   }
 
   const EMD = {
-    cubicSpline, findExtrema, envelope, envelopes, siftOnce, imfCheck, sift, emd,
+    cubicSpline, findExtrema, envelope, envelopes, siftOnce, imfCheck, sift, emd, eemd,
     fft, ifft, spectrum, hilbert, hilbertSpectrum,
-    countZeroCrossings, zeroCrossingFreq, peakAmp, energy, correlation,
+    countZeroCrossings, zeroCrossingFreq, meanFreq, peakAmp, energy, correlation,
     nextPow2, SD_THRESHOLD, MAX_SIFT, CFG
   };
 

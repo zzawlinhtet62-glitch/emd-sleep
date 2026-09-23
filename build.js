@@ -11,6 +11,7 @@ const parts = {
   '/*__EMD__*/': read('src/emd.core.js'),
   '/*__SIGNALS__*/': read('src/signals.js'),
   '/*__I18N__*/': read('src/i18n.js'),
+  '/*__I18NCH__*/': read('src/i18n.chapters.js'),
   '/*__APP__*/': read('src/app.js')
 };
 for (const k of Object.keys(parts)) {

@@ -2,15 +2,17 @@
 const fs = require('fs');
 const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('src/app.js', 'utf8');
-const I = require('../src/i18n.js');
+require('../src/i18n.js');
+require('../src/i18n.chapters.js');
+const I = globalThis.I18N;
 
 let bad = 0;
 function fail(m) { console.log('  MISSING ' + m); bad++; }
 
 /* every #id app.js touches must exist in the document */
 const ids = new Set();
-let m, re = /\$\$?\('#([A-Za-z0-9_-]+)'/g;
-while ((m = re.exec(app))) ids.add(m[1]);
+let m, re = /\$\$?\('#([A-Za-z0-9_-]+)'(\s*\+)?/g;
+while ((m = re.exec(app))) { if (!m[2]) ids.add(m[1]); }   /* skip concatenated ids like '#lF' + k */
 console.log(`checking ${ids.size} element ids referenced by app.js`);
 ids.forEach(id => { if (html.indexOf('id="' + id + '"') < 0) fail('id #' + id); });
 

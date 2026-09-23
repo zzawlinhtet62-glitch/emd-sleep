@@ -300,6 +300,61 @@ footer p { max-width: var(--measure); }
 #implList code { color: var(--trace); font-size: .86rem; }
 .hero-strip .plot-head { margin-bottom: 8px; }
 
+/* ---------- segmented language toggle ---------- */
+.seg-group { display: inline-flex; border: 1px solid var(--haze); border-radius: var(--radius); overflow: hidden; }
+.seg {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  color: var(--text-dim); font: 500 .8rem/1 var(--sans); padding: 7px 11px; letter-spacing: .03em;
+}
+.seg + .seg { border-left: 1px solid var(--haze); }
+.seg:hover { color: var(--text); }
+.seg[aria-pressed="true"] { background: var(--haze); color: var(--text); }
+.seg:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+.ctl-label { color: var(--text-dim); font-size: .85rem; margin-right: 2px; }
+.hint { color: var(--text-dim); font-size: .76rem; }
+
+/* ---------- chapter 04: component sliders ---------- */
+.comp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 26px; margin: 4px 0 6px; }
+@media (max-width: 760px) { .comp-grid { grid-template-columns: 1fr; } }
+.comp { border-top: 1px solid var(--haze); padding-top: 10px; }
+.comp .slider { margin-bottom: 8px; }
+.comp .slider label { min-width: 4.5em; }
+.comp-name { font: 600 .78rem/1 var(--mono); letter-spacing: .06em; color: var(--trace); margin: 0 0 10px; }
+
+/* ---------- chapter 08: paper cards ---------- */
+.papers { display: grid; gap: 10px; margin: 18px 0 8px; }
+.paper { border: 1px solid var(--haze); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+.paper.is-open { border-color: color-mix(in srgb, var(--trace) 45%, var(--haze)); }
+.paper-head {
+  appearance: none; width: 100%; background: none; border: 0; cursor: pointer; text-align: left;
+  display: grid; grid-template-columns: 3rem 1fr 1.6rem; gap: 12px; align-items: center;
+  padding: 14px 16px; color: inherit; font: inherit;
+}
+.paper-head:hover { background: color-mix(in srgb, var(--haze) 30%, transparent); }
+.paper-head:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.paper-head .n { font: 500 .8rem/1 var(--mono); color: var(--trace); }
+.paper-head .ph b { display: block; font-weight: 600; font-size: .95rem; margin-bottom: 2px; }
+.paper-head .cite { color: var(--text-dim); font-size: .8rem; }
+.paper-head .tog { font: 400 1.1rem/1 var(--mono); color: var(--text-dim); text-align: right; }
+.paper-body { padding: 0 16px 16px; border-top: 1px solid var(--haze); }
+.paper-body dl { display: grid; grid-template-columns: 4.5rem 1fr; gap: 6px 16px; margin: 14px 0 0; }
+.paper-body dt { font: 500 .74rem/1.6 var(--mono); letter-spacing: .06em; color: var(--text-dim); }
+.paper-body dd { margin: 0; font-size: .9rem; max-width: 66ch; }
+.paper-body .meta { color: var(--text-dim); font-size: .82rem; margin: 14px 0 0; }
+@media (max-width: 560px) {
+  .paper-head { grid-template-columns: 2.4rem 1fr 1.2rem; gap: 8px; padding: 12px; }
+  .paper-body dl { grid-template-columns: 1fr; gap: 2px; }
+  .paper-body dd { margin-bottom: 8px; }
+}
+
+@media (max-width: 620px) {
+  /* long control labels must be allowed to wrap, or they push the page wider */
+  .slider { flex-wrap: wrap; row-gap: 4px; }
+  .slider label { white-space: normal; flex: 1 0 100%; }
+  .slider output { min-width: 5ch; }
+}
+
 </style>
 </head>
 <body>
@@ -307,7 +362,10 @@ footer p { max-width: var(--measure); }
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span data-i18n="brand">經驗模態分解</span><span data-i18n="brandSub">整夜記錄</span></div>
-    <button class="ghost" id="langBtn" type="button">EN</button>
+    <div class="seg-group" id="langToggle" role="group">
+      <button class="seg" type="button" data-lang="zh" aria-pressed="true">中</button>
+      <button class="seg" type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
     <button class="ghost" id="themeBtn" type="button">明亮</button>
   </div>
 </header>
@@ -339,13 +397,81 @@ footer p { max-width: var(--measure); }
   <section>
     <div class="wrap">
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" type="button" data-tab="1" aria-selected="true">一、篩選演算法</button>
-        <button class="tab" role="tab" type="button" data-tab="2" aria-selected="false">二、五個睡眠期</button>
-        <button class="tab" role="tab" type="button" data-tab="3" aria-selected="false">三、傅立葉 vs 希爾伯特</button>
+        <button class="tab" role="tab" type="button" data-tab="ext" aria-selected="false">01 局部極值</button>
+        <button class="tab" role="tab" type="button" data-tab="env" aria-selected="false">02 包絡線與端點</button>
+        <button class="tab" role="tab" type="button" data-tab="sift" aria-selected="true">03 篩選演算法</button>
+        <button class="tab" role="tab" type="button" data-tab="lab" aria-selected="false">04 訊號實驗室</button>
+        <button class="tab" role="tab" type="button" data-tab="stage" aria-selected="false">05 五個睡眠期</button>
+        <button class="tab" role="tab" type="button" data-tab="spec" aria-selected="false">06 傅立葉 vs 希爾伯特</button>
+        <button class="tab" role="tab" type="button" data-tab="mix" aria-selected="false">07 模態混合與 EEMD</button>
+        <button class="tab" role="tab" type="button" data-tab="paper" aria-selected="false">08 論文案例</button>
       </div>
 
-      <!-- ===== tab 1 ===== -->
-      <div class="panel" role="tabpanel" data-tab="1">
+
+      <!-- ===== 01 local extrema ===== -->
+      <div class="panel" role="tabpanel" data-tab="ext" hidden>
+        <h2 data-i18n="exTitle"></h2>
+        <p data-i18n="exIntro"></p>
+        <div class="controls">
+          <div class="slider">
+            <label for="xFreq" data-i18n="exFreq"></label>
+            <input type="range" id="xFreq" min="1" max="20" step="0.5" value="7">
+            <output id="xFreqOut" for="xFreq"></output>
+          </div>
+          <div class="slider">
+            <label for="xAmp" data-i18n="exAmp"></label>
+            <input type="range" id="xAmp" min="0" max="6" step="0.1" value="2.5">
+            <output id="xAmpOut" for="xAmp"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 64 Hz · N = 256 · t (s)</span></div>
+          <canvas id="xMain"></canvas>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="xPos" data-i18n="exPos"></label>
+            <input type="range" id="xPos" min="1" max="254" step="1" value="96">
+            <output id="xPosOut" for="xPos"></output>
+          </div>
+          <span class="hint mono" data-i18n="exClick"></span>
+        </div>
+        <div class="checks" id="xPanel"></div>
+        <div class="readout" id="xCounts"></div>
+        <p class="note" data-i18n="exNote"></p>
+      </div>
+
+      <!-- ===== 02 envelopes and ends ===== -->
+      <div class="panel" role="tabpanel" data-tab="env" hidden>
+        <h2 data-i18n="envTitle"></h2>
+        <p data-i18n="envIntro"></p>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="envMode"></span>
+          <div class="stages" id="eModes">
+            <button class="btn" type="button" data-mode="none"></button>
+            <button class="btn" type="button" data-mode="linear"></button>
+            <button class="btn" type="button" data-mode="mirror"></button>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="eCut" data-i18n="envCut"></label>
+            <input type="range" id="eCut" min="600" max="1024" step="8" value="1008">
+            <output id="eCutOut" for="eCut"></output>
+          </div>
+        </div>
+        <p class="stage-desc" id="eModeDesc"></p>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · t (s)</span></div>
+          <canvas id="eMain"></canvas>
+          <div class="legend" id="eLegend"></div>
+        </div>
+        <div class="readout" id="eReadout"></div>
+        <p class="note" data-i18n="envNote"></p>
+      </div>
+
+      <!-- ===== 03 the sifting algorithm ===== -->
+      <div class="panel" role="tabpanel" data-tab="sift" hidden>
         <h2 data-i18n="p1Title"></h2>
         <p data-i18n="p1Intro"></p>
 
@@ -390,8 +516,61 @@ footer p { max-width: var(--measure); }
         </div>
       </div>
 
-      <!-- ===== tab 2 ===== -->
-      <div class="panel" role="tabpanel" data-tab="2" hidden>
+
+      <!-- ===== 04 signal lab ===== -->
+      <div class="panel" role="tabpanel" data-tab="lab" hidden>
+        <h2 data-i18n="labTitle"></h2>
+        <p data-i18n="labIntro"></p>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="labPreset"></span>
+          <div class="stages" id="lPresets">
+            <button class="btn" type="button" data-preset="two" data-i18n="labPresetTwo"></button>
+            <button class="btn" type="button" data-preset="close" data-i18n="labPresetClose"></button>
+            <button class="btn" type="button" data-preset="slow" data-i18n="labPresetSlow"></button>
+          </div>
+        </div>
+        <div class="comp-grid">
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp1"></span></p>
+            <div class="slider"><label for="lF0" data-i18n="labFreq"></label>
+              <input type="range" id="lF0" min="0.3" max="30" step="0.1" value="1.5"><output id="lF0Out"></output></div>
+            <div class="slider"><label for="lA0" data-i18n="labAmp"></label>
+              <input type="range" id="lA0" min="0" max="8" step="0.1" value="5"><output id="lA0Out"></output></div>
+          </div>
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp2"></span></p>
+            <div class="slider"><label for="lF1" data-i18n="labFreq"></label>
+              <input type="range" id="lF1" min="0.3" max="30" step="0.1" value="7"><output id="lF1Out"></output></div>
+            <div class="slider"><label for="lA1" data-i18n="labAmp"></label>
+              <input type="range" id="lA1" min="0" max="8" step="0.1" value="3"><output id="lA1Out"></output></div>
+          </div>
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp3"></span></p>
+            <div class="slider"><label for="lF2" data-i18n="labFreq"></label>
+              <input type="range" id="lF2" min="0.3" max="30" step="0.1" value="18"><output id="lF2Out"></output></div>
+            <div class="slider"><label for="lA2" data-i18n="labAmp"></label>
+              <input type="range" id="lA2" min="0" max="8" step="0.1" value="1.5"><output id="lA2Out"></output></div>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="lNoise" data-i18n="labNoise"></label>
+            <input type="range" id="lNoise" min="0" max="3" step="0.1" value="0">
+            <output id="lNoiseOut" for="lNoise"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · N = 1024</span><span class="mono">t (s)</span></div>
+          <div class="imf-rows" id="lRows"></div>
+        </div>
+        <h3 data-i18n="labReconTitle"></h3>
+        <div class="readout"><div id="lRecon"></div></div>
+        <p class="note" data-i18n="labReconNote"></p>
+        <p class="note" data-i18n="labNote"></p>
+      </div>
+
+      <!-- ===== 05 five sleep stages ===== -->
+      <div class="panel" role="tabpanel" data-tab="stage" hidden>
         <h2 data-i18n="p2Title"></h2>
         <p data-i18n="p2Intro"></p>
 
@@ -423,7 +602,7 @@ footer p { max-width: var(--measure); }
       </div>
 
       <!-- ===== tab 3 ===== -->
-      <div class="panel" role="tabpanel" data-tab="3" hidden>
+      <div class="panel" role="tabpanel" data-tab="spec" hidden>
         <h2 data-i18n="p3Title"></h2>
         <p data-i18n="p3Intro"></p>
 
@@ -465,6 +644,60 @@ footer p { max-width: var(--measure); }
         </div>
 
         <p class="note" data-i18n="p3Concl"></p>
+      </div>
+
+      <!-- ===== 07 mode mixing and EEMD ===== -->
+      <div class="panel" role="tabpanel" data-tab="mix" hidden>
+        <h2 data-i18n="mixTitle"></h2>
+        <p data-i18n="mixIntro"></p>
+        <div class="controls">
+          <div class="slider">
+            <label for="mBursts" data-i18n="mixBursts"></label>
+            <input type="range" id="mBursts" min="1" max="6" step="1" value="3">
+            <output id="mBurstsOut" for="mBursts"></output>
+          </div>
+          <div class="slider">
+            <label for="mFreq" data-i18n="mixFreq"></label>
+            <input type="range" id="mFreq" min="6" max="20" step="1" value="12">
+            <output id="mFreqOut" for="mFreq"></output>
+          </div>
+        </div>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="mixMethod"></span>
+          <div class="stages" id="mMethods">
+            <button class="btn" type="button" data-method="emd">EMD</button>
+            <button class="btn" type="button" data-method="eemd">EEMD</button>
+          </div>
+        </div>
+        <div class="controls" id="mEemdControls">
+          <div class="slider">
+            <label for="mEns" data-i18n="mixEns"></label>
+            <input type="range" id="mEns" min="10" max="80" step="5" value="40">
+            <output id="mEnsOut" for="mEns"></output>
+          </div>
+          <div class="slider">
+            <label for="mNoise" data-i18n="mixNoiseAmp"></label>
+            <input type="range" id="mNoise" min="0.02" max="0.4" step="0.01" value="0.1">
+            <output id="mNoiseOut" for="mNoise"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · N = 1024</span><span class="mono">t (s)</span></div>
+          <div class="imf-rows" id="mRows"></div>
+        </div>
+        <div class="readout" id="mReadout"></div>
+        <p data-i18n="mixExplain"></p>
+        <p class="note" data-i18n="mixNote"></p>
+      </div>
+
+      <!-- ===== 08 the papers ===== -->
+      <div class="panel" role="tabpanel" data-tab="paper" hidden>
+        <h2 data-i18n="paperTitle"></h2>
+        <p data-i18n="paperIntro"></p>
+        <div id="pCards" class="papers"></div>
+        <h3 data-i18n="paperCompareTitle"></h3>
+        <div class="tablewrap" id="pTable"></div>
+        <p class="note" data-i18n="paperMethodEvo"></p>
       </div>
     </div>
   </section>
@@ -617,7 +850,7 @@ footer p { max-width: var(--measure); }
      extrapolating.  Skipping this makes the first and last ~10%
      of every envelope visibly wrong: the classic "end effect".  */
   const N_MIRROR = 2;
-  const CFG = { boundary: 'linear' };   /* 'linear' | 'mirror' */
+  const CFG = { boundary: 'linear' };   /* 'linear' | 'mirror' | 'none' */
 
   function takeRev(arr, from, count) {
     const out = [];
@@ -752,6 +985,16 @@ footer p { max-width: var(--measure); }
       }
       return { up: flat, lo: flat2 };
     }
+    if (CFG.boundary === 'none') {
+      /* no boundary treatment at all: the spline is built from the
+         extrema alone, so beyond the outermost ones it extrapolates
+         freely. Kept so the end effect can be shown rather than
+         merely described. */
+      const kx = { X: [], Y: [] }, kn = { X: [], Y: [] };
+      for (let i = 0; i < maxI.length; i++) { kx.X.push(maxI[i]); kx.Y.push(y[maxI[i]]); }
+      for (let i = 0; i < minI.length; i++) { kn.X.push(minI[i]); kn.Y.push(y[minI[i]]); }
+      return { up: splineAt(kx, n), lo: splineAt(kn, n) };
+    }
     if (CFG.boundary === 'linear') {
       return {
         up: splineAt(extendLinear(y, maxI, true), n),
@@ -873,6 +1116,80 @@ footer p { max-width: var(--measure); }
     return { imfs, residue: r };
   }
 
+  /* ---------- 7b. EEMD ---------------------------------------
+     Ensemble EMD (Wu & Huang 2009). Each ensemble member is the
+     signal plus a fresh realisation of finite-amplitude white
+     noise; the members are decomposed independently and the
+     IMFs averaged index by index. The noise fills the gaps that
+     make an intermittent signal produce mode mixing, and it
+     cancels in the average.
+     The averaged IMFs no longer sum to the signal exactly, so
+     the residue returned here is y - sum(IMFs), which keeps the
+     reconstruction exact for display.                          */
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function eemd(y, opts) {
+    opts = opts || {};
+    const ensemble = Math.max(1, opts.ensemble || 40);
+    const maxImf = opts.maxImf || 8;
+    const ratio = opts.noiseRatio === undefined ? 0.2 : opts.noiseRatio;
+    const n = y.length;
+
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += y[i];
+    mean /= n;
+    let sd = 0;
+    for (let i = 0; i < n; i++) { const d = y[i] - mean; sd += d * d; }
+    sd = Math.sqrt(sd / n);
+    const amp = ratio * sd;
+
+    const acc = [];
+    for (let k = 0; k < maxImf; k++) acc.push(new Float64Array(n));
+    const hits = new Int32Array(maxImf);
+    const rnd = mulberry32(opts.seed === undefined ? 20260923 : opts.seed);
+    const work = new Float64Array(n);
+
+    for (let e = 0; e < ensemble; e++) {
+      for (let i = 0; i < n; i++) {
+        /* sum of four uniforms: close enough to Gaussian here */
+        const u = rnd() + rnd() + rnd() + rnd() - 2;
+        work[i] = y[i] + u * amp * 0.8660254;
+      }
+      const d = emd(work, maxImf);
+      for (let k = 0; k < d.imfs.length; k++) {
+        const c = d.imfs[k], a = acc[k];
+        for (let i = 0; i < n; i++) a[i] += c[i];
+        hits[k]++;
+      }
+    }
+
+    const imfs = [];
+    for (let k = 0; k < maxImf; k++) {
+      if (!hits[k]) break;
+      const a = acc[k];
+      for (let i = 0; i < n; i++) a[i] /= ensemble;
+      imfs.push(a);
+    }
+    /* trim trailing modes that almost every member failed to produce */
+    while (imfs.length > 1 && hits[imfs.length - 1] < ensemble * 0.5) imfs.pop();
+
+    const residue = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = y[i];
+      for (let k = 0; k < imfs.length; k++) s -= imfs[k][i];
+      residue[i] = s;
+    }
+    return { imfs, residue, ensemble, noiseAmp: amp };
+  }
+
   /* ---------- 8. FFT (iterative radix-2, in place) ------------ */
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
 
@@ -966,6 +1283,29 @@ footer p { max-width: var(--measure); }
   function zeroCrossingFreq(x, fs) {
     return countZeroCrossings(x) * fs / (2 * x.length);
   }
+
+  /* Amplitude-weighted mean instantaneous frequency.
+     The zero-crossing rate is fine for a steady oscillation but
+     badly biased for an intermittent one: in the quiet stretches
+     of a bursty IMF, tiny residual ripple still crosses zero and
+     drags the estimate upward (a 12 Hz burst train reads as
+     25 Hz). Weighting by a^2 counts a sample only as far as it
+     carries energy, which is the physically meaningful measure
+     and the one the Hilbert spectrum is built on.              */
+  function meanFreq(x, fs) {
+    const h = hilbert(x, fs);
+    const n = x.length;
+    const lo = Math.min(20, Math.floor(n * 0.02));
+    let num = 0, den = 0;
+    for (let i = lo; i < n - lo; i++) {
+      const f = h.freq[i];
+      if (!(f > 0) || f > fs / 2) continue;
+      const w = h.amp[i] * h.amp[i];
+      num += w * f;
+      den += w;
+    }
+    return den > 0 ? num / den : 0;
+  }
   function peakAmp(x) {
     let m = 0;
     for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > m) m = a; }
@@ -1025,9 +1365,9 @@ footer p { max-width: var(--measure); }
   }
 
   const EMD = {
-    cubicSpline, findExtrema, envelope, envelopes, siftOnce, imfCheck, sift, emd,
+    cubicSpline, findExtrema, envelope, envelopes, siftOnce, imfCheck, sift, emd, eemd,
     fft, ifft, spectrum, hilbert, hilbertSpectrum,
-    countZeroCrossings, zeroCrossingFreq, peakAmp, energy, correlation,
+    countZeroCrossings, zeroCrossingFreq, meanFreq, peakAmp, energy, correlation,
     nextPow2, SD_THRESHOLD, MAX_SIFT, CFG
   };
 
@@ -1188,6 +1528,78 @@ footer p { max-width: var(--measure); }
     return { t, y, fs, n };
   }
 
+  /* ---------- mode mixing demo -------------------------------
+     A slow carrier plus a fast burst that is only present part
+     of the time. Intermittency is exactly what makes the sifting
+     process reach different decisions in different segments, so
+     this is the textbook way to produce mode mixing.           */
+  function mixingSignal(nBursts, burstFreq) {
+    const fs = SLEEP_FS, n = SLEEP_N;
+    nBursts = nBursts === undefined ? 3 : nBursts;
+    burstFreq = burstFreq === undefined ? 12 : burstFreq;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    const slow = new Float64Array(n), fast = new Float64Array(n);
+    const dur = n / fs;
+    for (let i = 0; i < n; i++) {
+      const ti = t[i];
+      slow[i] = 5 * Math.sin(2 * Math.PI * 1.0 * ti);
+      let b = 0;
+      for (let k = 0; k < nBursts; k++) {
+        const c = dur * (k + 0.5) / nBursts;
+        b += gauss(ti, c, 0.30);
+      }
+      fast[i] = 2.2 * Math.min(1, b) * Math.sin(2 * Math.PI * burstFreq * ti);
+      y[i] = slow[i] + fast[i];
+    }
+    return { t, y, slow, fast, fs, n };
+  }
+
+  /* ---------- envelope / end-effect demo ---------------------
+     Amplitude rises linearly, so the true upper envelope is
+     known in closed form and the error of each boundary rule
+     can be measured rather than argued about.                 */
+  function amSignal(n) {
+    const fs = SLEEP_FS, full = SLEEP_N;
+    n = n || full;
+    const t = timeAxis(n, fs), y = new Float64Array(n), env = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const ti = t[i];
+      const A = 5 * (1 + 0.9 * ti / (full / fs));
+      env[i] = A;
+      y[i] = A * Math.sin(2 * Math.PI * 0.9 * ti + 0.7);
+    }
+    return { t, y, env, fs, n };
+  }
+
+  /* ---------- tab 4: three sinusoids you can dial ------------ */
+  function labSignal(comps, noiseLevel) {
+    const fs = SLEEP_FS, n = SLEEP_N;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let v = 0;
+      for (let k = 0; k < comps.length; k++) {
+        v += comps[k].a * Math.sin(2 * Math.PI * comps[k].f * t[i] + k * 0.7);
+      }
+      y[i] = v;
+    }
+    if (noiseLevel > 0) {
+      const nz = gaussNoise(n, noiseLevel, 4242);
+      for (let i = 0; i < n; i++) y[i] += nz[i];
+    }
+    return { t, y, fs, n };
+  }
+
+  /* ---------- tab 1 of the new chapters: extrema ------------- */
+  function extremaSignal(f2, a2) {
+    const fs = 64, n = 256;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      y[i] = 4 * Math.sin(2 * Math.PI * 1.2 * t[i])
+           + a2 * Math.sin(2 * Math.PI * f2 * t[i] + 0.6);
+    }
+    return { t, y, fs, n };
+  }
+
   /* ---------- test signal of section 5 ----------------------- */
   function testSignal() {
     const fs = 100, n = 1024;
@@ -1216,7 +1628,8 @@ footer p { max-width: var(--measure); }
 
   const SIGNALS = {
     rng, gaussNoise, gauss, timeAxis,
-    teachingSignal, sleepSignal, spindleSignal, testSignal,
+    teachingSignal, sleepSignal, spindleSignal, testSignal, mixingSignal,
+    amSignal, labSignal, extremaSignal,
     SLEEP_STAGES, SLEEP_FS, SLEEP_N, BANDS, bandOf
   };
 
@@ -1308,7 +1721,9 @@ footer p { max-width: var(--measure); }
       /* ---- tab 2 ---- */
       p2Title: '五個睡眠期分解出什麼',
       p2Intro: '依睡眠醫學的描述合成五段 10.24 秒的腦波，然後對每一段做完整的 EMD。' +
-               '每條 IMF 右邊標出用過零率估計的主頻、峰值振幅，以及對應的腦波頻帶。',
+               '每條 IMF 左邊標出主頻、峰值振幅與對應的腦波頻帶。主頻取的是「振幅加權的平均瞬時頻率」' +
+               '（由希爾伯特轉換算出），不是過零率——過零率對間歇性的 IMF 會嚴重高估，' +
+               '第 07 章有一個 12 Hz 的爆發被過零率讀成 25 Hz 的例子。',
       p2Noise: '加入雜訊',
       p2NoiseUnit: 'µV',
       stageNames: { wake: '清醒', n1: 'N1 淺睡', n2: 'N2', n3: 'N3 深睡', rem: 'REM' },
@@ -1390,7 +1805,7 @@ footer p { max-width: var(--measure); }
       implEyebrow: '實作',
       implTitle: '這個頁面裡跑的是什麼',
       implIntro: '所有數值都是在你的瀏覽器裡即時算出來的，沒有預先產生的圖，也沒有用任何函式庫。' +
-                 '以下九個函式全部手寫：',
+                 '以下函式全部手寫：',
       implList: [
         ['cubicSpline', '自然三次樣條。用 Thomas 演算法解三對角系統求各節點的二階導數，再逐段求值。'],
         ['findExtrema', '逐點與左右鄰居比較找局部極值，平台區段收斂成單一點。'],
@@ -1400,7 +1815,9 @@ footer p { max-width: var(--measure); }
         ['sift', '反覆篩選，SD < 0.2 停止，上限 12 次。'],
         ['emd', '反覆抽取 IMF 並從殘量中扣除，直到極值不足或能量過小。'],
         ['fft / spectrum', '疊代式 radix-2 原地 FFT，以及單邊振幅頻譜。'],
-        ['hilbert', '以 FFT 建構解析訊號，相位差 unwrap 後換算成瞬時頻率。']
+        ['hilbert', '以 FFT 建構解析訊號，相位差 unwrap 後換算成瞬時頻率。'],
+        ['eemd', '集成經驗模態分解：對多組「原訊號 + 白雜訊」各做一次 EMD，再平均對應的 IMF。'],
+        ['meanFreq', '振幅加權的平均瞬時頻率，用來標註每條 IMF 的主頻。']
       ],
       implTests: '演算法先用 Node 測過才接上畫面。測試內容包括：IMF1 與 13 Hz 成分的相關係數 0.999938；' +
                  '所有 IMF 加殘量重建原訊號的最大誤差 1.78 × 10⁻¹⁵；' +
@@ -1508,8 +1925,10 @@ footer p { max-width: var(--measure); }
 
       p2Title: 'What five sleep stages decompose into',
       p2Intro: 'Five 10.24-second epochs synthesised from the sleep-medicine description of each stage, then fully ' +
-               'decomposed. Each IMF is labelled with its dominant frequency (from the zero-crossing rate), its peak ' +
-               'amplitude, and the EEG band it falls in.',
+               'decomposed. Each IMF is labelled with its dominant frequency, peak amplitude and EEG band. The ' +
+               'frequency is the amplitude-weighted mean instantaneous frequency from the Hilbert transform rather ' +
+               'than a zero-crossing rate, because the zero-crossing rate badly overestimates an intermittent IMF — ' +
+               'chapter 07 has a 12 Hz burst train that reads as 25 Hz that way.',
       p2Noise: 'Added noise',
       p2NoiseUnit: 'µV',
       stageNames: { wake: 'Wake', n1: 'N1', n2: 'N2', n3: 'N3', rem: 'REM' },
@@ -1595,7 +2014,7 @@ footer p { max-width: var(--measure); }
       implEyebrow: 'Implementation',
       implTitle: 'What is actually running on this page',
       implIntro: 'Every number here is computed in your browser as you interact with it. No pre-rendered figures, ' +
-                 'no libraries. These nine functions are written from scratch:',
+                 'no libraries. These functions are written from scratch:',
       implList: [
         ['cubicSpline', 'Natural cubic spline: the tridiagonal system for the second derivatives is solved with the Thomas algorithm, then each piece is evaluated.'],
         ['findExtrema', 'Local extrema by comparison with both neighbours; plateaux collapse to a single point.'],
@@ -1605,7 +2024,9 @@ footer p { max-width: var(--measure); }
         ['sift', 'Repeated sifting, stopping at SD < 0.2, capped at 12 iterations.'],
         ['emd', 'Extracts IMFs one at a time and subtracts each from the remainder until too few extrema or too little energy is left.'],
         ['fft / spectrum', 'Iterative in-place radix-2 FFT, and the single-sided amplitude spectrum.'],
-        ['hilbert', 'Builds the analytic signal through the FFT; the phase difference is unwrapped and converted to an instantaneous frequency.']
+        ['hilbert', 'Builds the analytic signal through the FFT; the phase difference is unwrapped and converted to an instantaneous frequency.'],
+        ['eemd', 'Ensemble EMD: decomposes many copies of the signal plus white noise and averages the corresponding IMFs.'],
+        ['meanFreq', 'Amplitude-weighted mean instantaneous frequency, used to label each IMF.']
       ],
       implTests: 'The algorithms were verified under Node before any of this was drawn. The suite checks that IMF1 ' +
                  'correlates with the 13 Hz component at r = 0.999938; that the IMFs plus the residue reconstruct the ' +
@@ -1690,6 +2111,365 @@ footer p { max-width: var(--measure); }
   const I18N = { STR, REFS };
   if (typeof module !== 'undefined' && module.exports) module.exports = I18N;
   global.I18N = I18N;
+
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* ============================================================
+   i18n.chapters.js — strings for the five chapters added after
+   the first release. Merged into I18N.STR, which i18n.js must
+   have defined first.
+   ============================================================ */
+'use strict';
+(function (global) {
+  const I = global.I18N;
+
+  const EXTRA = {
+    zh: {
+      tab_ext: '01 局部極值',
+      tab_env: '02 包絡線與端點',
+      tab_sift: '03 篩選演算法',
+      tab_lab: '04 訊號實驗室',
+      tab_stage: '05 五個睡眠期',
+      tab_spec: '06 傅立葉 vs 希爾伯特',
+      tab_mix: '07 模態混合與 EEMD',
+      tab_paper: '08 論文案例',
+
+      /* ---- 01 局部極值 ---- */
+      exTitle: '一切從「比較左右鄰居」開始',
+      exIntro: 'EMD 沒有基底函數，它唯一的輸入是極值點的位置。判定方法簡單到近乎粗暴：' +
+               '一個取樣點只要比左右兩個鄰居都大，就是局部極大值；都小就是局部極小值。' +
+               '整個演算法的自適應性，全部來自這一步。',
+      exFreq: '第二個成分的頻率',
+      exAmp: '第二個成分的振幅',
+      exPos: '檢查哪一點',
+      exClick: '（也可以直接點圖上任一處）',
+      exPanelTitle: '第 %1 點的判定',
+      exNb: 'y[%1] = %2',
+      exIsMax: '比左右鄰居都大 → 局部極大值',
+      exIsMin: '比左右鄰居都小 → 局部極小值',
+      exIsNone: '夾在鄰居之間 → 不是極值',
+      exCount: '極大值 %1 個，極小值 %2 個，合計 %3 個極值',
+      exZero: '過零 %1 次',
+      exDiffOk: '|%1 − %2| = %3 ≤ 1，條件一成立',
+      exDiffNo: '|%1 − %2| = %3 > 1，條件一不成立',
+      exNote: '拉高第二個成分的頻率，極值點會迅速變多，而過零點不會同步增加——' +
+              '兩者的差距正是 IMF 條件一在量的東西：一條曲線是不是「每個起伏都對稱地繞著零」。' +
+              '這也是為什麼篩選必須反覆做：一次減去中線通常還不夠。',
+
+      /* ---- 02 包絡線與端點 ---- */
+      envTitle: '包絡線的兩端，是猜出來的',
+      envIntro: '包絡線是把極值點用三次樣條連起來。問題在於：訊號的第一點和最後一點幾乎不會剛好是極值，' +
+                '所以兩端那一段沒有資料可以內插，只能外推。這裡的測試訊號振幅隨時間線性上升，' +
+                '因此它真正的上包絡線是已知的——你可以直接看到每種規則錯了多少。',
+      envMode: '端點處理方式',
+      envModeNone: '不處理',
+      envModeLinear: '線性外推（本站預設）',
+      envModeMirror: '鏡像延拓',
+      envCut: '記錄長度',
+      envModeDescNone: '樣條只穿過極值點，兩端讓自然邊界條件自由外推。自然樣條的二階導數在端點為零，' +
+                       '所以延伸出去接近一條直線——對這個振幅線性上升的訊號剛好幾乎完全正確。',
+      envModeDescLinear: '用最外側兩個同型極值做線性外推，再夾限在訊號值域與端點值之內。' +
+                         '夾限會壓低包絡線，對這個訊號偏保守，但在驗收訊號上分解品質最好。',
+      envModeDescMirror: 'Rilling 的鏡像邊界條件：把端點附近的極值對最外側極值鏡射，讓樣條永遠在內插。' +
+                         '這是文獻最常見的做法。',
+      envGap: '最後一個極大值在第 %1 點，距離結尾 %2 點——這 %2 點的上包絡完全是外推的。',
+      envErr: '上包絡誤差：外側 10% 最大 <b>%1%</b>，內側 80% 最大 <b>%2%</b>',
+      envTruthLeg: '真實上包絡',
+      envNote: '三種規則在中段幾乎完全重合，只在兩端分岔——這就是端點效應：誤差從邊界產生，' +
+               '再隨著每一輪篩選往內滲。也請注意沒有哪一種規則普遍最好：' +
+               '在這個振幅上升的訊號上「不處理」反而最準，但在第五節的驗收訊號（13 Hz + 1.5 Hz）上，' +
+               '線性外推讓 IMF3 之後的殘餘能量從 10.164% 降到 0.001%。規則要挑，得看訊號。',
+
+      /* ---- 04 訊號實驗室 ---- */
+      labTitle: '自己組一段訊號，看它怎麼被拆開',
+      labIntro: '三個正弦成分，頻率與振幅都可以拉。拉完馬上做完整的 EMD。' +
+                '這裡沒有預先算好的答案——你改一個數字，整串 IMF 就重算一次。',
+      labComp: '成分 %1',
+      labComp1: '成分 1', labComp2: '成分 2', labComp3: '成分 3',
+      labFreq: '頻率',
+      labAmp: '振幅',
+      labNoise: '雜訊',
+      labPreset: '預設組合',
+      labPresetTwo: '兩個相距很遠的頻率',
+      labPresetClose: '兩個相近的頻率',
+      labPresetSlow: '慢波加快波',
+      labReconTitle: '重建檢查',
+      labRecon: '所有 IMF 加上殘量，與原訊號的最大誤差：<b>%1</b>（%2 個取樣點）',
+      labReconNote: 'EMD 是完備的分解：不管你把參數調成什麼樣，加回去一定等於原訊號。' +
+                    '這個誤差只會是浮點數的捨入等級。',
+      labNote: '把兩個頻率拉到很接近（例如 4 Hz 與 5 Hz），EMD 會把它們併成同一條 IMF——' +
+               '篩選是靠極值密度分層的，兩個太接近的成分在局部看起來就像一個被調變的成分。' +
+               '一般的經驗法則是頻率比要大於約 2 倍才分得開。',
+
+      /* ---- 07 模態混合與 EEMD ---- */
+      mixTitle: '模態混合，以及用雜訊解決雜訊的問題',
+      mixIntro: '一條 1 Hz 的慢波，加上只在幾個瞬間出現的快速爆發。' +
+                '這種「間歇性」正是 EMD 最大的弱點：在有爆發的區段，篩選看到的是快波；' +
+                '在沒有爆發的區段，它看到的是慢波。於是同一條 IMF1 裡混進了兩種完全不同的頻率。',
+      mixBursts: '爆發次數',
+      mixFreq: '爆發頻率',
+      mixMethod: '分解方法',
+      mixEns: '集成數',
+      mixNoiseAmp: '加入雜訊（訊號標準差的倍數）',
+      mixTrue: '真實的爆發成分',
+      mixCorrTitle: 'IMF1 與真實爆發成分的相關係數',
+      mixCorrEmd: 'EMD：<b>%1</b>',
+      mixCorrEemd: 'EEMD（%1 組集成，雜訊 %2 σ）：<b class="hi">%3</b>',
+      mixExplain: 'EEMD 的做法違反直覺：既然問題出在訊號在某些區段「沒有東西可以篩」，' +
+                  '那就補上白雜訊，讓每個區段都有均勻分布的尺度可用。' +
+                  '對很多組「原訊號 + 不同雜訊」各做一次 EMD，再把對應的 IMF 平均——' +
+                  '雜訊互相抵消，真正的成分留下來［2］。Wu 與 Huang 特別指出雜訊必須是有限振幅、' +
+                  '而非無限小，才能迫使集成窮盡所有可能解。',
+      mixNote: '代價是：集成後的 IMF 不再完全正交，計算量乘上集成數，' +
+               '而且雜訊振幅與集成數要自己調——拉拉看這兩個滑桿，相關係數會跟著變。',
+      mixImf1: 'IMF1（最高頻的那一層）',
+
+      /* ---- 08 論文案例 ---- */
+      paperTitle: '這些方法在真實資料上做到什麼程度',
+      paperIntro: '點開每一張卡片看細節。以下數字都出自論文本身，沒有推估。',
+      paperExpand: '展開',
+      paperCollapse: '收合',
+      paperCompareTitle: '四分類 / 五分類準確率（文獻［4］）',
+      thDataset: '資料庫', thFour: '四分類', thFive: '五分類',
+      paperMethodEvo: '方法演化：EMD (1998) → EEMD (2009) → CEEMDAN (2016)。' +
+                      '三者的差別都在同一件事上：如何處理模態混合。',
+      papers: [
+        {
+          ref: 4,
+          head: 'EEMD + XGBoost 的單導程自動睡眠分期',
+          task: '用一條 EEG 通道判讀整夜睡眠分期，取代人工判讀。',
+          method: '把 EEG 以 EEMD 分解，從原始訊號與各條 IMF 同時抽取統計特徵、時域特徵與' +
+                  '非線性動力學特徵，交給 XGBoost，五折交叉驗證。',
+          result: 'Sleep-EDF 四分類 93.1%、五分類 91.9%；DREAMS 86.4% / 83.4%；SHHS 87.5% / 85.8%。',
+          point: '關鍵結論不是準確率本身，而是：IMF 導出的特徵確實提供了原始訊號以外的額外資訊。'
+        },
+        {
+          ref: 7,
+          head: '只用清醒時 5 分鐘的呼吸訊號篩檢睡眠呼吸中止',
+          task: '常規 OSA 診斷需要整夜多導記錄；這篇問的是能不能只用清醒時段的短訊號篩檢。',
+          method: '取清醒時 5 分鐘的口鼻氣道壓力訊號，以 HHT 抽取本質振盪模態，' +
+                  '比較第一與第二模態的頻率分布。',
+          result: '41 名受試者（非 OSA 20 人、OSA 21 人），兩組的模態頻率分布有顯著差異；' +
+                  '所建指標在 95% 特異度下達 81.0% 敏感度。',
+          point: '呼吸訊號本質上是非穩態的——這正是 HHT 相對於傅立葉的主場。'
+        },
+        {
+          ref: 2,
+          head: 'EEMD：用雜訊解決模態混合',
+          task: '直接針對 EMD 的最大弱點：間歇性造成的模態混合。',
+          method: '對「原訊號加白雜訊」的多組集成樣本各做一次完整篩選，再把對應的 IMF 平均。',
+          result: '雜訊在平均中互相抵消，真實成分保留，模態混合大幅減輕。',
+          point: '雜訊必須是有限振幅而非無限小，才能迫使集成窮盡所有可能解。' +
+                 '第 07 章可以自己動手驗證這件事。'
+        },
+        {
+          ref: 6,
+          head: 'CEEMDAN + Bagging 的電腦輔助睡眠分期',
+          task: '延續 [5] 的路線，把分解方法換成 CEEMDAN。',
+          method: '完全集成經驗模態分解搭配自適應雜訊，再以 bootstrap aggregating 分類。',
+          result: '與 [1][2] 並列，構成方法的演化軌跡：EMD → EEMD → CEEMDAN。',
+          point: 'CEEMDAN 在每一階分解後才加入自適應雜訊，解決 EEMD 殘留雜訊與各集成 IMF 數不一致的問題。'
+        },
+        {
+          ref: 8,
+          head: '全希爾伯特譜分析用於全身麻醉下的 EEG',
+          task: '分析麻醉深度與疼痛—鎮痛平衡的腦波調變模式。',
+          method: '用 Holo-Hilbert 譜分析（HHSA），同時辨識振幅調變與頻率調變。',
+          result: '黃鍔院士與台灣團隊的近期合作成果。',
+          point: '論文指出傳統頻譜方法必須事先切定頻帶再帶通濾波，' +
+                 '難以偵測不同振盪成分之間的非線性交互作用——這是改用 HHSA 的理由。'
+        }
+      ],
+      paperTable: [
+        ['Sleep-EDF', '93.1%', '91.9%'],
+        ['DREAMS', '86.4%', '83.4%'],
+        ['SHHS', '87.5%', '85.8%']
+      ],
+
+      /* ---- 03 的逐輪說明 ---- */
+      verdictNoWhy: '第 %1 輪的 h 還不是 IMF：%2。把 h 當作新訊號，回到步驟 1 再篩一次。',
+      whyC1: '極值數與過零數相差 %1（要 ≤ 1）',
+      whyC2: '包絡中線偏移 %1%（要 < 5%）',
+      whyAnd: '；'
+    },
+
+    en: {
+      tab_ext: '01 · Local extrema',
+      tab_env: '02 · Envelopes and ends',
+      tab_sift: '03 · The sifting algorithm',
+      tab_lab: '04 · Signal lab',
+      tab_stage: '05 · Five sleep stages',
+      tab_spec: '06 · Fourier vs Hilbert',
+      tab_mix: '07 · Mode mixing and EEMD',
+      tab_paper: '08 · The papers',
+
+      exTitle: 'It all starts with comparing two neighbours',
+      exIntro: 'EMD has no basis functions. Its only input is where the extrema are, and the test for one is ' +
+               'almost crude: a sample larger than both of its neighbours is a local maximum, smaller than both ' +
+               'is a local minimum. The whole adaptiveness of the method comes from this one step.',
+      exFreq: 'Frequency of the second component',
+      exAmp: 'Amplitude of the second component',
+      exPos: 'Sample to inspect',
+      exClick: '(or just click anywhere on the plot)',
+      exPanelTitle: 'The test at sample %1',
+      exNb: 'y[%1] = %2',
+      exIsMax: 'larger than both neighbours → local maximum',
+      exIsMin: 'smaller than both neighbours → local minimum',
+      exIsNone: 'between its neighbours → not an extremum',
+      exCount: '%1 maxima, %2 minima, %3 extrema in total',
+      exZero: '%1 zero crossings',
+      exDiffOk: '|%1 − %2| = %3 ≤ 1, condition 1 holds',
+      exDiffNo: '|%1 − %2| = %3 > 1, condition 1 fails',
+      exNote: 'Raise the frequency of the second component and the extrema multiply while the zero crossings do ' +
+              'not keep pace. That gap is exactly what IMF condition 1 measures: whether every oscillation of the ' +
+              'curve is symmetric about zero. It is also why sifting has to repeat — subtracting the mean once is ' +
+              'rarely enough.',
+
+      envTitle: 'Both ends of an envelope are a guess',
+      envIntro: 'An envelope is a cubic spline through the extrema. The trouble is that the first and last samples ' +
+                'are almost never extrema, so the outer segments have nothing to interpolate between and must be ' +
+                'extrapolated. The test signal here has a linearly rising amplitude, so its true upper envelope is ' +
+                'known exactly — you can see how wrong each rule is.',
+      envMode: 'Boundary treatment',
+      envModeNone: 'none',
+      envModeLinear: 'linear extrapolation (default here)',
+      envModeMirror: 'mirror extension',
+      envCut: 'Record length',
+      envModeDescNone: 'The spline passes through the extrema only, and the natural boundary condition extrapolates ' +
+                       'freely past them. A natural spline has zero second derivative at its ends, so it continues ' +
+                       'almost as a straight line — which happens to be very nearly right for a linearly rising amplitude.',
+      envModeDescLinear: 'Extrapolates linearly from the two outermost extrema of the same kind, then clamps the ' +
+                         'result inside the signal range and the edge sample. The clamp pulls the envelope in, ' +
+                         'which is conservative here but gave the cleanest decomposition on the verification signal.',
+      envModeDescMirror: 'Rilling’s boundary conditions: the extrema near an edge are reflected about the ' +
+                         'outermost one so the spline always interpolates. This is the usual choice in the literature.',
+      envGap: 'The last maximum sits at sample %1, which is %2 samples before the end — that whole stretch of the upper envelope is extrapolated.',
+      envErr: 'Upper-envelope error: outer 10% at most <b>%1%</b>, inner 80% at most <b>%2%</b>',
+      envTruthLeg: 'true envelope',
+      envNote: 'The three rules coincide in the middle and diverge only at the ends. That is the end effect: the ' +
+               'error is born at the boundary and seeps inward with every sifting iteration. Note also that no rule ' +
+               'wins everywhere — on this rising-amplitude signal, doing nothing is the most accurate, yet on the ' +
+               'verification signal of section 5 (13 Hz + 1.5 Hz) linear extrapolation cut the leftover energy in ' +
+               'IMF3 and beyond from 10.164% to 0.001%. Which rule to use depends on the signal.',
+
+      labTitle: 'Build a signal and watch it come apart',
+      labIntro: 'Three sinusoidal components, each with its own frequency and amplitude. Every change re-runs the ' +
+                'full decomposition — nothing here is precomputed.',
+      labComp: 'Component %1',
+      labComp1: 'Component 1', labComp2: 'Component 2', labComp3: 'Component 3',
+      labFreq: 'frequency',
+      labAmp: 'amplitude',
+      labNoise: 'Noise',
+      labPreset: 'Presets',
+      labPresetTwo: 'two well-separated frequencies',
+      labPresetClose: 'two close frequencies',
+      labPresetSlow: 'slow wave plus fast wave',
+      labReconTitle: 'Reconstruction check',
+      labRecon: 'Largest difference between the sum of all IMFs plus the residue and the original signal: <b>%1</b> (over %2 samples)',
+      labReconNote: 'EMD is a complete decomposition: whatever you set the parameters to, adding the parts back gives ' +
+                    'the signal again. This error is nothing but floating-point rounding.',
+      labNote: 'Push two frequencies close together — say 4 Hz and 5 Hz — and EMD merges them into one IMF. Sifting ' +
+               'separates by density of extrema, and two nearby components look locally like a single modulated one. ' +
+               'The rule of thumb is that a frequency ratio above roughly 2 is needed for a clean split.',
+
+      mixTitle: 'Mode mixing, and curing noise with noise',
+      mixIntro: 'A 1 Hz carrier plus a fast burst that only exists for a moment at a time. That intermittency is the ' +
+                'worst weakness of EMD: where the burst is present, sifting sees the fast wave; where it is absent, ' +
+                'it sees the slow one. Two entirely different frequencies end up inside the same IMF1.',
+      mixBursts: 'Number of bursts',
+      mixFreq: 'Burst frequency',
+      mixMethod: 'Method',
+      mixEns: 'Ensemble size',
+      mixNoiseAmp: 'Added noise (multiples of the signal sd)',
+      mixTrue: 'the true burst component',
+      mixCorrTitle: 'Correlation of IMF1 with the true burst component',
+      mixCorrEmd: 'EMD: <b>%1</b>',
+      mixCorrEemd: 'EEMD (%1 members, noise %2 σ): <b class="hi">%3</b>',
+      mixExplain: 'The EEMD trick is counter-intuitive: if the problem is that some segments have nothing to sift, ' +
+                  'add white noise so every segment has a uniform distribution of scales available. Decompose many ' +
+                  'copies of "signal plus a different noise realisation" and average the corresponding IMFs — the ' +
+                  'noise cancels and the real components survive [2]. Wu and Huang point out that the noise must be ' +
+                  'of finite rather than infinitesimal amplitude to force the ensemble to exhaust the possible solutions.',
+      mixNote: 'The costs: the averaged IMFs are no longer strictly orthogonal, the computation is multiplied by the ' +
+               'ensemble size, and both the noise amplitude and the ensemble size have to be chosen by hand. Drag ' +
+               'those two sliders and watch the correlation move.',
+      mixImf1: 'IMF1 (the fastest layer)',
+
+      paperTitle: 'How far these methods get on real data',
+      paperIntro: 'Open a card for the detail. Every number below comes from the paper itself.',
+      paperExpand: 'open',
+      paperCollapse: 'close',
+      paperCompareTitle: 'Four-class and five-class accuracy, from [4]',
+      thDataset: 'Dataset', thFour: 'Four-class', thFive: 'Five-class',
+      paperMethodEvo: 'The evolution of the method — EMD (1998) → EEMD (2009) → CEEMDAN (2016) — is the story of ' +
+                      'one problem: what to do about mode mixing.',
+      papers: [
+        {
+          ref: 4,
+          head: 'Single-channel automatic sleep staging with EEMD and XGBoost',
+          task: 'Score a whole night of sleep from one EEG channel instead of by hand.',
+          method: 'Decompose the EEG with EEMD, then take statistical, time-domain and nonlinear-dynamic features ' +
+                  'from the raw signal and from each IMF together, and classify with XGBoost under five-fold cross-validation.',
+          result: 'Sleep-EDF 93.1% four-class and 91.9% five-class; DREAMS 86.4% / 83.4%; SHHS 87.5% / 85.8%.',
+          point: 'The finding that matters is not the accuracy itself but that IMF-derived features carry information the raw signal does not.'
+        },
+        {
+          ref: 7,
+          head: 'Screening for sleep apnoea from five waking minutes of breathing',
+          task: 'Routine OSA diagnosis needs a whole night of polysomnography. This asks whether a short waking recording can screen instead.',
+          method: 'Five minutes of oronasal airway pressure recorded while awake, decomposed with the HHT; the frequency ' +
+                  'distributions of the first and second modes are compared.',
+          result: 'Across 41 subjects (20 non-OSA, 21 OSA) the two groups differed significantly, and the derived index ' +
+                  'reached 81.0% sensitivity at 95% specificity.',
+          point: 'Respiratory signals are non-stationary by nature, which is exactly where the HHT beats Fourier.'
+        },
+        {
+          ref: 2,
+          head: 'EEMD: curing mode mixing with noise',
+          task: 'Aimed straight at the biggest weakness of EMD — the mode mixing caused by intermittency.',
+          method: 'Sift each member of an ensemble of "signal plus white noise" copies, then average the corresponding IMFs.',
+          result: 'The noise cancels in the average, the real components survive, and mode mixing is greatly reduced.',
+          point: 'The noise must be of finite, not infinitesimal, amplitude to force the ensemble to exhaust the possible ' +
+                 'solutions. Chapter 07 lets you verify this yourself.'
+        },
+        {
+          ref: 6,
+          head: 'Computer-aided sleep staging with CEEMDAN and bagging',
+          task: 'Continues from [5], swapping the decomposition for CEEMDAN.',
+          method: 'Complete ensemble empirical mode decomposition with adaptive noise, classified with bootstrap aggregating.',
+          result: 'Read alongside [1] and [2], it completes the arc: EMD → EEMD → CEEMDAN.',
+          point: 'CEEMDAN adds adaptive noise after each stage of the decomposition, which fixes the residual noise and the ' +
+                 'inconsistent IMF counts that EEMD leaves behind.'
+        },
+        {
+          ref: 8,
+          head: 'Holo-Hilbert spectral analysis of EEG under general anaesthesia',
+          task: 'Characterise EEG modulation patterns and the nociceptive–analgesic balance during anaesthesia.',
+          method: 'Holo-Hilbert spectral analysis, which identifies amplitude modulation and frequency modulation at once.',
+          result: 'A recent collaboration between Huang and a Taiwanese group.',
+          point: 'The paper notes that conventional spectral methods must fix the frequency bands and band-pass filter first, ' +
+                 'which makes nonlinear interactions between oscillatory components hard to detect — hence HHSA.'
+        }
+      ],
+      paperTable: [
+        ['Sleep-EDF', '93.1%', '91.9%'],
+        ['DREAMS', '86.4%', '83.4%'],
+        ['SHHS', '87.5%', '85.8%']
+      ],
+
+      verdictNoWhy: 'The h of round %1 is not an IMF yet: %2. It becomes the new signal, and we sift again from step 1.',
+      whyC1: 'extrema and zero crossings differ by %1 (needs ≤ 1)',
+      whyC2: 'the envelope mean is off by %1% (needs < 5%)',
+      whyAnd: '; '
+    }
+  };
+
+  Object.assign(I.STR.zh, EXTRA.zh);
+  Object.assign(I.STR.en, EXTRA.en);
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = EXTRA;
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
@@ -1869,6 +2649,27 @@ footer p { max-width: var(--measure); }
     return { yMin: mn - m, yMax: mx + m };
   }
 
+  /* A column of stacked traces: signal on top, then the IMFs.
+     Used by chapters 04, 05 and 07.                            */
+  function drawStack(host, rows, t) {
+    host.innerHTML = rows.map((r, k) =>
+      '<div class="imf-row' + (r.isSignal ? ' is-signal' : '') + '">' +
+      '<div class="imf-meta">' + (r.meta || '') + '</div>' +
+      '<canvas data-row="' + k + '" aria-hidden="true"></canvas></div>').join('');
+    const tmax = t[t.length - 1];
+    $$('canvas', host).forEach((cv, k) => {
+      const r = rows[k];
+      const rg = span([r.data], 0.15);
+      const p = makePlot(cv, r.isSignal ? 74 : 58, {
+        xMin: 0, xMax: tmax, yMin: rg.yMin, yMax: rg.yMax,
+        padL: 44, padR: 8, padT: 6, padB: k === rows.length - 1 ? 18 : 6
+      });
+      if (!p) return;
+      axes(p, { yTicks: [0], yFmt: () => '0', xFmt: v => v.toFixed(0), xLabels: k === rows.length - 1 });
+      series(p, r.data, t, r.colour || COL.trace, r.isSignal ? 1.5 : 1.2, null, r.isSignal ? 1 : 0.78);
+    });
+  }
+
   /* ==========================================================
      HERO STRIP — a page of polysomnograph paper
      ========================================================== */
@@ -2033,13 +2834,22 @@ footer p { max-width: var(--measure); }
           '<span>' + S.c2Name + '</span>' +
           '<span class="val">' + fmt(S.c2Val, (c.sym * 100).toFixed(1)) + '</span>' +
         '</div>' +
-        '<div class="verdict ' + (c.ok ? 'ok' : 'no') + '">' + (c.ok ? S.verdictOk : S.verdictNo) + '</div>';
+        '<div class="verdict ' + (c.ok ? 'ok' : 'no') + '">' + verdictText(c) + '</div>';
     } else {
       box.hidden = true;
       box.innerHTML = '';
     }
 
     render1Table();
+  }
+
+  /* Why this round failed, rather than the same sentence every time. */
+  function verdictText(c) {
+    if (c.ok) return S.verdictOk;
+    const why = [];
+    if (!c.c1) why.push(fmt(S.whyC1, Math.abs(c.nExt - c.nZero)));
+    if (!c.c2) why.push(fmt(S.whyC2, (c.sym * 100).toFixed(1)));
+    return fmt(S.verdictNoWhy, T1.round, why.join(S.whyAnd));
   }
 
   function render1Table() {
@@ -2072,7 +2882,7 @@ footer p { max-width: var(--measure); }
     if (T2.baseF[T2.stage] === undefined) {
       const q = SIGNALS.sleepSignal(T2.stage, 0);
       const d = EMD.emd(q.y, 6);
-      T2.baseF[T2.stage] = EMD.zeroCrossingFreq(d.imfs[0], q.fs);
+      T2.baseF[T2.stage] = EMD.meanFreq(d.imfs[0], q.fs);
     }
   }
 
@@ -2085,45 +2895,23 @@ footer p { max-width: var(--measure); }
     T2.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
     rows.push({ label: S.p2Residue, data: T2.dec.residue, isResidue: true });
 
-    const host = $('#t2Rows');
-    host.innerHTML = rows.map((r, k) => {
-      let meta;
+    rows.forEach(r => {
       if (r.isSignal) {
-        meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV peak';
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV peak';
       } else if (r.isResidue) {
-        meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV';
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV';
       } else {
-        const f = EMD.zeroCrossingFreq(r.data, T2.sig.fs);
+        const f = EMD.meanFreq(r.data, T2.sig.fs);
         const band = SIGNALS.bandOf(f);
-        meta = '<b>' + r.label + '</b>' +
-               f.toFixed(1) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(0) + ' µV<br>' +
-               '<span class="band">' + (S.p2Band[band] || band) + '</span>';
+        r.meta = '<b>' + r.label + '</b>' +
+                 f.toFixed(1) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(0) + ' µV<br>' +
+                 '<span class="band">' + (S.p2Band[band] || band) + '</span>';
       }
-      return '<div class="imf-row' + (r.isSignal ? ' is-signal' : '') + '">' +
-             '<div class="imf-meta">' + meta + '</div>' +
-             '<canvas data-row="' + k + '" aria-hidden="true"></canvas></div>';
-    }).join('');
-
-    const t = T2.sig.t, tmax = t[t.length - 1];
-    $$('canvas', host).forEach((cv, k) => {
-      const r = rows[k];
-      const rg = span([r.data], 0.15);
-      const p = makePlot(cv, r.isSignal ? 74 : 58, {
-        xMin: 0, xMax: tmax, yMin: rg.yMin, yMax: rg.yMax,
-        padL: 44, padR: 8, padT: 6, padB: k === rows.length - 1 ? 18 : 6
-      });
-      if (!p) return;
-      axes(p, {
-        yTicks: [0], yFmt: () => '0',
-        xFmt: v => v.toFixed(0),
-        xLabels: k === rows.length - 1
-      });
-      series(p, r.data, t, r.isSignal ? COL.trace : COL.trace, r.isSignal ? 1.5 : 1.2, null, r.isSignal ? 1 : 0.78);
     });
+    drawStack($('#t2Rows'), rows, T2.sig.t);
+    $('#t2Axis').textContent = 't (s) →  0 … ' + T2.sig.t[T2.sig.n - 1].toFixed(2);
 
-    $('#t2Axis').textContent = 't (s) →  0 … ' + tmax.toFixed(2);
-
-    const f1 = EMD.zeroCrossingFreq(T2.dec.imfs[0], T2.sig.fs);
+    const f1 = EMD.meanFreq(T2.dec.imfs[0], T2.sig.fs);
     $('#t2NoiseNote').textContent = T2.noise === 0
       ? fmt(S.p2NoiseNoteZero, f1.toFixed(1))
       : fmt(S.p2NoiseNote, T2.baseF[T2.stage].toFixed(1), f1.toFixed(1));
@@ -2283,20 +3071,279 @@ footer p { max-width: var(--measure); }
   }
 
   /* ==========================================================
+     CHAPTER 01 — local extrema
+     ========================================================== */
+  const TX = { f2: 7, a2: 2.5, pos: 96, sig: null, ext: null, nZero: 0 };
+
+  function txCompute() {
+    TX.sig = SIGNALS.extremaSignal(TX.f2, TX.a2);
+    TX.ext = EMD.findExtrema(TX.sig.y);
+    TX.nZero = EMD.countZeroCrossings(TX.sig.y);
+    if (TX.pos > TX.sig.n - 2) TX.pos = TX.sig.n - 2;
+    if (TX.pos < 1) TX.pos = 1;
+  }
+
+  function renderExt() {
+    const sig = TX.sig, t = sig.t, y = sig.y, i = TX.pos;
+    $('#xFreqOut').textContent = TX.f2.toFixed(1) + ' Hz';
+    $('#xAmpOut').textContent = TX.a2.toFixed(1);
+    $('#xPosOut').textContent = 'i = ' + i;
+
+    const rg = span([y], 0.14);
+    const p = makePlot($('#xMain'), 250, { xMin: t[0], xMax: t[sig.n - 1], yMin: rg.yMin, yMax: rg.yMax });
+    if (p) {
+      axes(p, { yFmt: v => v.toFixed(0), xFmt: v => v.toFixed(1) });
+      const ctx = p.ctx;
+      ctx.save();
+      ctx.strokeStyle = COL.haze; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x0, Math.round(p.Y(0)) + 0.5); ctx.lineTo(p.x1, Math.round(p.Y(0)) + 0.5); ctx.stroke();
+      ctx.restore();
+      series(p, y, t, COL.trace, 1.6);
+      dots(p, TX.ext.maxI, y, t, COL.coral, true);
+      dots(p, TX.ext.minI, y, t, COL.coral, false);
+      /* the three samples under test */
+      ctx.save();
+      ctx.strokeStyle = COL.cyan; ctx.globalAlpha = 0.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(p.X(t[i]), p.y0); ctx.lineTo(p.X(t[i]), p.y1); ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      ctx.fillStyle = COL.cyan;
+      [i - 1, i, i + 1].forEach(k => {
+        if (k < 0 || k >= sig.n) return;
+        ctx.beginPath(); ctx.arc(p.X(t[k]), p.Y(y[k]), k === i ? 4 : 2.8, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+      TX._plot = p;
+    }
+
+    const isMax = i > 0 && i < sig.n - 1 && y[i] > y[i - 1] && y[i] >= y[i + 1];
+    const isMin = i > 0 && i < sig.n - 1 && y[i] < y[i - 1] && y[i] <= y[i + 1];
+    const verdict = isMax ? S.exIsMax : isMin ? S.exIsMin : S.exIsNone;
+    const cls = (isMax || isMin) ? 'ok' : 'no';
+    $('#xPanel').innerHTML =
+      '<div class="check ' + cls + '">' +
+      '<span class="tag">' + fmt(S.exPanelTitle, i) + '</span>' +
+      '<span class="mono">' +
+        fmt(S.exNb, i - 1, y[i - 1].toFixed(3)) + '　' +
+        fmt(S.exNb, i, y[i].toFixed(3)) + '　' +
+        fmt(S.exNb, i + 1, y[i + 1].toFixed(3)) +
+      '</span>' +
+      '<span class="val">' + verdict + '</span></div>';
+
+    const nMax = TX.ext.maxI.length, nMin = TX.ext.minI.length, nExt = nMax + nMin;
+    const diff = Math.abs(nExt - TX.nZero);
+    $('#xCounts').innerHTML =
+      '<div>' + fmt(S.exCount, nMax, nMin, nExt) + '　·　' + fmt(S.exZero, TX.nZero) + '</div>' +
+      '<div class="' + (diff <= 1 ? '' : 'hi') + '">' +
+      fmt(diff <= 1 ? S.exDiffOk : S.exDiffNo, nExt, TX.nZero, diff) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 02 — envelopes and the end effect
+     ========================================================== */
+  const TE = { mode: 'linear', n: 1008, sig: null, up: null, lo: null, gap: 0, errEdge: 0, errMid: 0 };
+
+  function teCompute() {
+    TE.sig = SIGNALS.amSignal(TE.n);
+    const prev = EMD.CFG.boundary;
+    EMD.CFG.boundary = TE.mode;
+    const ex = EMD.findExtrema(TE.sig.y);
+    const e = EMD.envelopes(TE.sig.y, ex.maxI, ex.minI);
+    EMD.CFG.boundary = prev;
+    TE.up = e.up; TE.lo = e.lo;
+    TE.lastMax = ex.maxI[ex.maxI.length - 1];
+    TE.gap = TE.sig.n - 1 - TE.lastMax;
+
+    const edge = Math.round(TE.sig.n * 0.1);
+    let eE = 0, eM = 0;
+    for (let i = 0; i < TE.sig.n; i++) {
+      const err = Math.abs(TE.up[i] - TE.sig.env[i]) / TE.sig.env[i] * 100;
+      if (i < edge || i >= TE.sig.n - edge) eE = Math.max(eE, err); else eM = Math.max(eM, err);
+    }
+    TE.errEdge = eE; TE.errMid = eM;
+  }
+
+  function renderEnv() {
+    $$('#eModes .btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === TE.mode)));
+    $$('#eModes .btn').forEach(b => { b.textContent = S['envMode' + b.dataset.mode.charAt(0).toUpperCase() + b.dataset.mode.slice(1)]; });
+    $('#eCutOut').textContent = TE.n + ' pts';
+    $('#eModeDesc').textContent = S['envModeDesc' + TE.mode.charAt(0).toUpperCase() + TE.mode.slice(1)];
+
+    const sig = TE.sig, t = sig.t;
+    const rg = span([sig.y, TE.up, TE.lo, sig.env], 0.1);
+    const p = makePlot($('#eMain'), 280, { xMin: 0, xMax: t[sig.n - 1], yMin: rg.yMin, yMax: rg.yMax });
+    if (p) {
+      axes(p, { yFmt: v => v.toFixed(0), xFmt: v => v.toFixed(1) });
+      /* shade the extrapolated tail */
+      const ctx = p.ctx;
+      ctx.save();
+      ctx.fillStyle = COL.coral; ctx.globalAlpha = 0.07;
+      ctx.fillRect(p.X(t[TE.lastMax]), p.y0, p.x1 - p.X(t[TE.lastMax]), p.y1 - p.y0);
+      ctx.restore();
+      series(p, TE.up, t, COL.cyan, 1.6);
+      series(p, TE.lo, t, COL.cyan, 1.3, [4, 4]);
+      series(p, sig.y, t, COL.trace, 1.3, null, 0.85);
+      /* truth last, so it stays visible where it coincides with the estimate */
+      series(p, sig.env, t, COL.sage, 1.6, [5, 4]);
+    }
+    $('#eLegend').innerHTML =
+      '<span><i style="background:' + COL.trace + '"></i>' + S.legSignal + '</span>' +
+      '<span><i style="background:' + COL.cyan + '"></i>' + S.legUp + '</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,' + COL.cyan + ' 0 4px,transparent 4px 8px)"></i>' + S.legLo + '</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,' + COL.sage + ' 0 5px,transparent 5px 9px)"></i>' + S.envTruthLeg + '</span>';
+
+    $('#eReadout').innerHTML =
+      '<div>' + fmt(S.envGap, TE.lastMax, TE.gap) + '</div>' +
+      '<div>' + fmt(S.envErr, TE.errEdge.toFixed(2), TE.errMid.toFixed(2)) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 04 — signal lab
+     ========================================================== */
+  const TL = {
+    comps: [{ f: 1.5, a: 5 }, { f: 7, a: 3 }, { f: 18, a: 1.5 }],
+    noise: 0, sig: null, dec: null, err: 0
+  };
+
+  function tlCompute() {
+    TL.sig = SIGNALS.labSignal(TL.comps, TL.noise);
+    TL.dec = EMD.emd(TL.sig.y, 6);
+    let e = 0;
+    for (let i = 0; i < TL.sig.n; i++) {
+      let v = TL.dec.residue[i];
+      for (let k = 0; k < TL.dec.imfs.length; k++) v += TL.dec.imfs[k][i];
+      e = Math.max(e, Math.abs(v - TL.sig.y[i]));
+    }
+    TL.err = e;
+  }
+
+  function renderLab() {
+    TL.comps.forEach((c, k) => {
+      $('#lF' + k + 'Out').textContent = c.f.toFixed(1) + ' Hz';
+      $('#lA' + k + 'Out').textContent = c.a.toFixed(1);
+    });
+    $('#lNoiseOut').textContent = TL.noise.toFixed(1);
+
+    const rows = [{ label: S.p2Signal, data: TL.sig.y, isSignal: true }];
+    TL.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    rows.push({ label: S.p2Residue, data: TL.dec.residue, isResidue: true });
+    rows.forEach(r => {
+      if (r.isSignal || r.isResidue) {
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(2);
+      } else {
+        const f = EMD.meanFreq(r.data, TL.sig.fs);
+        r.meta = '<b>' + r.label + '</b>' + f.toFixed(2) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(2);
+      }
+    });
+    drawStack($('#lRows'), rows, TL.sig.t);
+    $('#lRecon').innerHTML = fmt(S.labRecon, TL.err.toExponential(2), TL.sig.n);
+  }
+
+  /* ==========================================================
+     CHAPTER 07 — mode mixing and EEMD
+     ========================================================== */
+  const TM = {
+    bursts: 3, freq: 12, method: 'eemd', ens: 40, noise: 0.1,
+    sig: null, demd: null, deemd: null, rEmd: 0, rEemd: 0
+  };
+
+  function tmCompute() {
+    TM.sig = SIGNALS.mixingSignal(TM.bursts, TM.freq);
+    TM.demd = EMD.emd(TM.sig.y, 6);
+    TM.deemd = EMD.eemd(TM.sig.y, { ensemble: TM.ens, noiseRatio: TM.noise, maxImf: 6 });
+    const a = 60, b = TM.sig.n - 60;
+    TM.rEmd = EMD.correlation(TM.demd.imfs[0], TM.sig.fast, a, b);
+    TM.rEemd = EMD.correlation(TM.deemd.imfs[0], TM.sig.fast, a, b);
+  }
+
+  function renderMix() {
+    $$('#mMethods .btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.method === TM.method)));
+    $('#mBurstsOut').textContent = String(TM.bursts);
+    $('#mFreqOut').textContent = TM.freq.toFixed(0) + ' Hz';
+    $('#mEnsOut').textContent = String(TM.ens);
+    $('#mNoiseOut').textContent = TM.noise.toFixed(2) + ' σ';
+    $('#mEemdControls').hidden = TM.method !== 'eemd';
+
+    const dec = TM.method === 'eemd' ? TM.deemd : TM.demd;
+    const rows = [
+      { label: S.p2Signal, data: TM.sig.y, isSignal: true },
+      { label: S.mixTrue, data: TM.sig.fast, colour: COL.sage }
+    ];
+    dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    rows.push({ label: S.p2Residue, data: dec.residue, isResidue: true });
+    rows.forEach((r, k) => {
+      if (k === 1) { r.meta = '<b>' + r.label + '</b>' + TM.freq.toFixed(0) + ' Hz'; return; }
+      if (r.isSignal || r.isResidue) { r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(2); return; }
+      const f = EMD.meanFreq(r.data, TM.sig.fs);
+      r.meta = '<b>' + r.label + '</b>' + f.toFixed(2) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(2);
+    });
+    drawStack($('#mRows'), rows, TM.sig.t);
+
+    $('#mReadout').innerHTML =
+      '<div>' + S.mixCorrTitle + '</div>' +
+      '<div>' + fmt(S.mixCorrEmd, TM.rEmd.toFixed(4)) + '</div>' +
+      '<div>' + fmt(S.mixCorrEemd, TM.ens, TM.noise.toFixed(2), TM.rEemd.toFixed(4)) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 08 — the papers
+     ========================================================== */
+  const TP = { open: 0 };
+
+  function renderPaper() {
+    const byRef = {};
+    I18N.REFS.forEach(r => { if (r.n) byRef[r.n] = r; });
+    $('#pCards').innerHTML = S.papers.map((c, k) => {
+      const r = byRef[c.ref] || {};
+      const isOpen = TP.open === k;
+      return '<div class="paper' + (isOpen ? ' is-open' : '') + '">' +
+        '<button class="paper-head" type="button" data-card="' + k + '" aria-expanded="' + isOpen + '">' +
+          '<span class="n">[' + c.ref + ']</span>' +
+          '<span class="ph"><b>' + c.head + '</b><span class="cite">' + (r.cite || '') + '</span></span>' +
+          '<span class="tog">' + (isOpen ? '−' : '+') + '</span>' +
+        '</button>' +
+        '<div class="paper-body"' + (isOpen ? '' : ' hidden') + '>' +
+          '<dl>' +
+            '<dt>' + (LANG === 'zh' ? '問題' : 'Question') + '</dt><dd>' + c.task + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '做法' : 'Method') + '</dt><dd>' + c.method + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '結果' : 'Result') + '</dt><dd>' + c.result + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '重點' : 'The point') + '</dt><dd>' + c.point + '</dd>' +
+          '</dl>' +
+          (r.doi ? '<p class="meta">' + r.where + ' DOI: <a href="https://doi.org/' + r.doi +
+                   '" target="_blank" rel="noopener">' + r.doi + '</a></p>' : '') +
+        '</div></div>';
+    }).join('');
+
+    $$('#pCards .paper-head').forEach(b => b.addEventListener('click', () => {
+      const k = +b.dataset.card;
+      TP.open = TP.open === k ? -1 : k;
+      renderPaper();
+    }));
+
+    $('#pTable').innerHTML =
+      '<table><thead><tr><th>' + S.thDataset + '</th><th>' + S.thFour + '</th><th>' + S.thFive + '</th></tr></thead><tbody>' +
+      S.paperTable.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+
+  /* ==========================================================
      tabs, language, wiring
      ========================================================== */
-  let activeTab = 1;
-  function showTab(n) {
-    activeTab = n;
-    $$('.tab').forEach(b => b.setAttribute('aria-selected', String(+b.dataset.tab === n)));
-    $$('.panel').forEach(pn => { pn.hidden = +pn.dataset.tab !== n; });
+  const RENDER = {
+    ext: renderExt, env: renderEnv, sift: render1, lab: renderLab,
+    stage: render2, spec: render3, mix: renderMix, paper: renderPaper
+  };
+  let activeTab = 'sift';
+  function showTab(k) {
+    activeTab = k;
+    $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
+    $$('.panel').forEach(pn => { pn.hidden = pn.dataset.tab !== k; });
     redrawActive();
   }
   function redrawActive() {
-    /* a hidden canvas has zero width, so each tab redraws on show */
-    if (activeTab === 1) render1();
-    else if (activeTab === 2) render2();
-    else render3();
+    /* a hidden canvas has zero width, so each chapter redraws on show */
+    const f = RENDER[activeTab];
+    if (f) f();
   }
 
   function applyLang() {
@@ -2306,13 +3353,16 @@ footer p { max-width: var(--measure); }
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    $('#langBtn').textContent = S.langBtn;
-    $('#langBtn').title = S.langTitle;
+    /* a two-state toggle, so which language is active is never in doubt */
+    $$('#langToggle .seg').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.lang === LANG));
+    });
+    $('#langToggle').title = S.langTitle;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
     $$('#t2Stages .btn').forEach(b => { b.textContent = S.stageNames[b.dataset.stage]; });
-    $$('.tab').forEach(b => { b.textContent = S['t' + b.dataset.tab]; });
+    $$('.tab').forEach(b => { b.textContent = S['tab_' + b.dataset.tab]; });
 
     buildImplList();
     buildRefs();
@@ -2359,16 +3409,21 @@ footer p { max-width: var(--measure); }
     readColours();
 
     heroCompute();
+    txCompute();
+    teCompute();
     t1Reset();
+    tlCompute();
     t2Compute();
     t3Compute();
+    tmCompute();
 
     /* ---- top bar ---- */
-    $('#langBtn').addEventListener('click', () => {
-      LANG = LANG === 'zh' ? 'en' : 'zh';
+    $$('#langToggle .seg').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.lang === LANG) return;
+      LANG = b.dataset.lang;
       save('emd-lang', LANG);
       applyLang();
-    });
+    }));
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
@@ -2391,7 +3446,7 @@ footer p { max-width: var(--measure); }
     }
 
     /* ---- tabs ---- */
-    $$('.tab').forEach(b => b.addEventListener('click', () => showTab(+b.dataset.tab)));
+    $$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
     /* ---- tab 1 ---- */
     $('#t1Next').addEventListener('click', t1Next);
@@ -2427,6 +3482,64 @@ footer p { max-width: var(--measure); }
       schedule(() => { t3Compute(); render3(); });
     });
 
+    /* ---- chapter 01: local extrema ---- */
+    const xF = $('#xFreq'), xA = $('#xAmp'), xP = $('#xPos');
+    xP.max = String(SIGNALS.extremaSignal(7, 2).n - 2);
+    xF.addEventListener('input', () => { TX.f2 = +xF.value; schedule(() => { txCompute(); renderExt(); }); });
+    xA.addEventListener('input', () => { TX.a2 = +xA.value; schedule(() => { txCompute(); renderExt(); }); });
+    xP.addEventListener('input', () => { TX.pos = +xP.value; schedule(renderExt); });
+    $('#xMain').addEventListener('click', ev => {
+      const p = TX._plot;
+      if (!p) return;
+      const r = ev.currentTarget.getBoundingClientRect();
+      const x = ev.clientX - r.left;
+      const frac = (x - p.x0) / (p.x1 - p.x0);
+      const i = Math.max(1, Math.min(TX.sig.n - 2, Math.round(frac * (TX.sig.n - 1))));
+      TX.pos = i; xP.value = String(i);
+      renderExt();
+    });
+
+    /* ---- chapter 02: envelopes and ends ---- */
+    $$('#eModes .btn').forEach(b => b.addEventListener('click', () => {
+      TE.mode = b.dataset.mode;
+      teCompute(); renderEnv();
+    }));
+    const eCut = $('#eCut');
+    eCut.addEventListener('input', () => {
+      TE.n = +eCut.value;
+      schedule(() => { teCompute(); renderEnv(); });
+    });
+
+    /* ---- chapter 04: signal lab ---- */
+    for (let k = 0; k < 3; k++) {
+      const fIn = $('#lF' + k), aIn = $('#lA' + k);
+      fIn.addEventListener('input', () => { TL.comps[k].f = +fIn.value; schedule(() => { tlCompute(); renderLab(); }); });
+      aIn.addEventListener('input', () => { TL.comps[k].a = +aIn.value; schedule(() => { tlCompute(); renderLab(); }); });
+    }
+    const lN = $('#lNoise');
+    lN.addEventListener('input', () => { TL.noise = +lN.value; schedule(() => { tlCompute(); renderLab(); }); });
+    const PRESETS = {
+      two:   [{ f: 1.5, a: 5 }, { f: 7, a: 3 }, { f: 18, a: 1.5 }],
+      close: [{ f: 4, a: 4 }, { f: 5, a: 4 }, { f: 16, a: 1 }],
+      slow:  [{ f: 0.8, a: 6 }, { f: 2, a: 2 }, { f: 13, a: 2.5 }]
+    };
+    $$('#lPresets .btn').forEach(b => b.addEventListener('click', () => {
+      TL.comps = PRESETS[b.dataset.preset].map(c => ({ f: c.f, a: c.a }));
+      TL.comps.forEach((c, k) => { $('#lF' + k).value = String(c.f); $('#lA' + k).value = String(c.a); });
+      tlCompute(); renderLab();
+    }));
+
+    /* ---- chapter 07: mode mixing and EEMD ---- */
+    $$('#mMethods .btn').forEach(b => b.addEventListener('click', () => {
+      TM.method = b.dataset.method;
+      renderMix();
+    }));
+    const mB = $('#mBursts'), mF = $('#mFreq'), mE = $('#mEns'), mN = $('#mNoise');
+    mB.addEventListener('input', () => { TM.bursts = +mB.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mF.addEventListener('input', () => { TM.freq = +mF.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mE.addEventListener('input', () => { TM.ens = +mE.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mN.addEventListener('input', () => { TM.noise = +mN.value; schedule(() => { tmCompute(); renderMix(); }); });
+
     /* ---- resize ---- */
     let rt = 0;
     window.addEventListener('resize', () => {
@@ -2435,7 +3548,7 @@ footer p { max-width: var(--measure); }
     });
 
     applyLang();
-    showTab(1);
+    showTab('sift');
     drawHero();
   }
 

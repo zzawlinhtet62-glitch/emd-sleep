@@ -18,7 +18,10 @@
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span data-i18n="brand">經驗模態分解</span><span data-i18n="brandSub">整夜記錄</span></div>
-    <button class="ghost" id="langBtn" type="button">EN</button>
+    <div class="seg-group" id="langToggle" role="group">
+      <button class="seg" type="button" data-lang="zh" aria-pressed="true">中</button>
+      <button class="seg" type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
     <button class="ghost" id="themeBtn" type="button">明亮</button>
   </div>
 </header>
@@ -50,13 +53,81 @@
   <section>
     <div class="wrap">
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" type="button" data-tab="1" aria-selected="true">一、篩選演算法</button>
-        <button class="tab" role="tab" type="button" data-tab="2" aria-selected="false">二、五個睡眠期</button>
-        <button class="tab" role="tab" type="button" data-tab="3" aria-selected="false">三、傅立葉 vs 希爾伯特</button>
+        <button class="tab" role="tab" type="button" data-tab="ext" aria-selected="false">01 局部極值</button>
+        <button class="tab" role="tab" type="button" data-tab="env" aria-selected="false">02 包絡線與端點</button>
+        <button class="tab" role="tab" type="button" data-tab="sift" aria-selected="true">03 篩選演算法</button>
+        <button class="tab" role="tab" type="button" data-tab="lab" aria-selected="false">04 訊號實驗室</button>
+        <button class="tab" role="tab" type="button" data-tab="stage" aria-selected="false">05 五個睡眠期</button>
+        <button class="tab" role="tab" type="button" data-tab="spec" aria-selected="false">06 傅立葉 vs 希爾伯特</button>
+        <button class="tab" role="tab" type="button" data-tab="mix" aria-selected="false">07 模態混合與 EEMD</button>
+        <button class="tab" role="tab" type="button" data-tab="paper" aria-selected="false">08 論文案例</button>
       </div>
 
-      <!-- ===== tab 1 ===== -->
-      <div class="panel" role="tabpanel" data-tab="1">
+
+      <!-- ===== 01 local extrema ===== -->
+      <div class="panel" role="tabpanel" data-tab="ext" hidden>
+        <h2 data-i18n="exTitle"></h2>
+        <p data-i18n="exIntro"></p>
+        <div class="controls">
+          <div class="slider">
+            <label for="xFreq" data-i18n="exFreq"></label>
+            <input type="range" id="xFreq" min="1" max="20" step="0.5" value="7">
+            <output id="xFreqOut" for="xFreq"></output>
+          </div>
+          <div class="slider">
+            <label for="xAmp" data-i18n="exAmp"></label>
+            <input type="range" id="xAmp" min="0" max="6" step="0.1" value="2.5">
+            <output id="xAmpOut" for="xAmp"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 64 Hz · N = 256 · t (s)</span></div>
+          <canvas id="xMain"></canvas>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="xPos" data-i18n="exPos"></label>
+            <input type="range" id="xPos" min="1" max="254" step="1" value="96">
+            <output id="xPosOut" for="xPos"></output>
+          </div>
+          <span class="hint mono" data-i18n="exClick"></span>
+        </div>
+        <div class="checks" id="xPanel"></div>
+        <div class="readout" id="xCounts"></div>
+        <p class="note" data-i18n="exNote"></p>
+      </div>
+
+      <!-- ===== 02 envelopes and ends ===== -->
+      <div class="panel" role="tabpanel" data-tab="env" hidden>
+        <h2 data-i18n="envTitle"></h2>
+        <p data-i18n="envIntro"></p>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="envMode"></span>
+          <div class="stages" id="eModes">
+            <button class="btn" type="button" data-mode="none"></button>
+            <button class="btn" type="button" data-mode="linear"></button>
+            <button class="btn" type="button" data-mode="mirror"></button>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="eCut" data-i18n="envCut"></label>
+            <input type="range" id="eCut" min="600" max="1024" step="8" value="1008">
+            <output id="eCutOut" for="eCut"></output>
+          </div>
+        </div>
+        <p class="stage-desc" id="eModeDesc"></p>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · t (s)</span></div>
+          <canvas id="eMain"></canvas>
+          <div class="legend" id="eLegend"></div>
+        </div>
+        <div class="readout" id="eReadout"></div>
+        <p class="note" data-i18n="envNote"></p>
+      </div>
+
+      <!-- ===== 03 the sifting algorithm ===== -->
+      <div class="panel" role="tabpanel" data-tab="sift" hidden>
         <h2 data-i18n="p1Title"></h2>
         <p data-i18n="p1Intro"></p>
 
@@ -101,8 +172,61 @@
         </div>
       </div>
 
-      <!-- ===== tab 2 ===== -->
-      <div class="panel" role="tabpanel" data-tab="2" hidden>
+
+      <!-- ===== 04 signal lab ===== -->
+      <div class="panel" role="tabpanel" data-tab="lab" hidden>
+        <h2 data-i18n="labTitle"></h2>
+        <p data-i18n="labIntro"></p>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="labPreset"></span>
+          <div class="stages" id="lPresets">
+            <button class="btn" type="button" data-preset="two" data-i18n="labPresetTwo"></button>
+            <button class="btn" type="button" data-preset="close" data-i18n="labPresetClose"></button>
+            <button class="btn" type="button" data-preset="slow" data-i18n="labPresetSlow"></button>
+          </div>
+        </div>
+        <div class="comp-grid">
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp1"></span></p>
+            <div class="slider"><label for="lF0" data-i18n="labFreq"></label>
+              <input type="range" id="lF0" min="0.3" max="30" step="0.1" value="1.5"><output id="lF0Out"></output></div>
+            <div class="slider"><label for="lA0" data-i18n="labAmp"></label>
+              <input type="range" id="lA0" min="0" max="8" step="0.1" value="5"><output id="lA0Out"></output></div>
+          </div>
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp2"></span></p>
+            <div class="slider"><label for="lF1" data-i18n="labFreq"></label>
+              <input type="range" id="lF1" min="0.3" max="30" step="0.1" value="7"><output id="lF1Out"></output></div>
+            <div class="slider"><label for="lA1" data-i18n="labAmp"></label>
+              <input type="range" id="lA1" min="0" max="8" step="0.1" value="3"><output id="lA1Out"></output></div>
+          </div>
+          <div class="comp">
+            <p class="comp-name"><span data-i18n="labComp3"></span></p>
+            <div class="slider"><label for="lF2" data-i18n="labFreq"></label>
+              <input type="range" id="lF2" min="0.3" max="30" step="0.1" value="18"><output id="lF2Out"></output></div>
+            <div class="slider"><label for="lA2" data-i18n="labAmp"></label>
+              <input type="range" id="lA2" min="0" max="8" step="0.1" value="1.5"><output id="lA2Out"></output></div>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="slider">
+            <label for="lNoise" data-i18n="labNoise"></label>
+            <input type="range" id="lNoise" min="0" max="3" step="0.1" value="0">
+            <output id="lNoiseOut" for="lNoise"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · N = 1024</span><span class="mono">t (s)</span></div>
+          <div class="imf-rows" id="lRows"></div>
+        </div>
+        <h3 data-i18n="labReconTitle"></h3>
+        <div class="readout"><div id="lRecon"></div></div>
+        <p class="note" data-i18n="labReconNote"></p>
+        <p class="note" data-i18n="labNote"></p>
+      </div>
+
+      <!-- ===== 05 five sleep stages ===== -->
+      <div class="panel" role="tabpanel" data-tab="stage" hidden>
         <h2 data-i18n="p2Title"></h2>
         <p data-i18n="p2Intro"></p>
 
@@ -134,7 +258,7 @@
       </div>
 
       <!-- ===== tab 3 ===== -->
-      <div class="panel" role="tabpanel" data-tab="3" hidden>
+      <div class="panel" role="tabpanel" data-tab="spec" hidden>
         <h2 data-i18n="p3Title"></h2>
         <p data-i18n="p3Intro"></p>
 
@@ -176,6 +300,60 @@
         </div>
 
         <p class="note" data-i18n="p3Concl"></p>
+      </div>
+
+      <!-- ===== 07 mode mixing and EEMD ===== -->
+      <div class="panel" role="tabpanel" data-tab="mix" hidden>
+        <h2 data-i18n="mixTitle"></h2>
+        <p data-i18n="mixIntro"></p>
+        <div class="controls">
+          <div class="slider">
+            <label for="mBursts" data-i18n="mixBursts"></label>
+            <input type="range" id="mBursts" min="1" max="6" step="1" value="3">
+            <output id="mBurstsOut" for="mBursts"></output>
+          </div>
+          <div class="slider">
+            <label for="mFreq" data-i18n="mixFreq"></label>
+            <input type="range" id="mFreq" min="6" max="20" step="1" value="12">
+            <output id="mFreqOut" for="mFreq"></output>
+          </div>
+        </div>
+        <div class="controls">
+          <span class="ctl-label" data-i18n="mixMethod"></span>
+          <div class="stages" id="mMethods">
+            <button class="btn" type="button" data-method="emd">EMD</button>
+            <button class="btn" type="button" data-method="eemd">EEMD</button>
+          </div>
+        </div>
+        <div class="controls" id="mEemdControls">
+          <div class="slider">
+            <label for="mEns" data-i18n="mixEns"></label>
+            <input type="range" id="mEns" min="10" max="80" step="5" value="40">
+            <output id="mEnsOut" for="mEns"></output>
+          </div>
+          <div class="slider">
+            <label for="mNoise" data-i18n="mixNoiseAmp"></label>
+            <input type="range" id="mNoise" min="0.02" max="0.4" step="0.01" value="0.1">
+            <output id="mNoiseOut" for="mNoise"></output>
+          </div>
+        </div>
+        <div class="plot">
+          <div class="plot-head"><span class="mono">fs = 100 Hz · N = 1024</span><span class="mono">t (s)</span></div>
+          <div class="imf-rows" id="mRows"></div>
+        </div>
+        <div class="readout" id="mReadout"></div>
+        <p data-i18n="mixExplain"></p>
+        <p class="note" data-i18n="mixNote"></p>
+      </div>
+
+      <!-- ===== 08 the papers ===== -->
+      <div class="panel" role="tabpanel" data-tab="paper" hidden>
+        <h2 data-i18n="paperTitle"></h2>
+        <p data-i18n="paperIntro"></p>
+        <div id="pCards" class="papers"></div>
+        <h3 data-i18n="paperCompareTitle"></h3>
+        <div class="tablewrap" id="pTable"></div>
+        <p class="note" data-i18n="paperMethodEvo"></p>
       </div>
     </div>
   </section>
@@ -239,6 +417,9 @@
 </script>
 <script>
 /*__I18N__*/
+</script>
+<script>
+/*__I18NCH__*/
 </script>
 <script>
 /*__APP__*/

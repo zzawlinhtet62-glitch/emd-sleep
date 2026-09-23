@@ -172,6 +172,27 @@
     return { yMin: mn - m, yMax: mx + m };
   }
 
+  /* A column of stacked traces: signal on top, then the IMFs.
+     Used by chapters 04, 05 and 07.                            */
+  function drawStack(host, rows, t) {
+    host.innerHTML = rows.map((r, k) =>
+      '<div class="imf-row' + (r.isSignal ? ' is-signal' : '') + '">' +
+      '<div class="imf-meta">' + (r.meta || '') + '</div>' +
+      '<canvas data-row="' + k + '" aria-hidden="true"></canvas></div>').join('');
+    const tmax = t[t.length - 1];
+    $$('canvas', host).forEach((cv, k) => {
+      const r = rows[k];
+      const rg = span([r.data], 0.15);
+      const p = makePlot(cv, r.isSignal ? 74 : 58, {
+        xMin: 0, xMax: tmax, yMin: rg.yMin, yMax: rg.yMax,
+        padL: 44, padR: 8, padT: 6, padB: k === rows.length - 1 ? 18 : 6
+      });
+      if (!p) return;
+      axes(p, { yTicks: [0], yFmt: () => '0', xFmt: v => v.toFixed(0), xLabels: k === rows.length - 1 });
+      series(p, r.data, t, r.colour || COL.trace, r.isSignal ? 1.5 : 1.2, null, r.isSignal ? 1 : 0.78);
+    });
+  }
+
   /* ==========================================================
      HERO STRIP — a page of polysomnograph paper
      ========================================================== */
@@ -336,13 +357,22 @@
           '<span>' + S.c2Name + '</span>' +
           '<span class="val">' + fmt(S.c2Val, (c.sym * 100).toFixed(1)) + '</span>' +
         '</div>' +
-        '<div class="verdict ' + (c.ok ? 'ok' : 'no') + '">' + (c.ok ? S.verdictOk : S.verdictNo) + '</div>';
+        '<div class="verdict ' + (c.ok ? 'ok' : 'no') + '">' + verdictText(c) + '</div>';
     } else {
       box.hidden = true;
       box.innerHTML = '';
     }
 
     render1Table();
+  }
+
+  /* Why this round failed, rather than the same sentence every time. */
+  function verdictText(c) {
+    if (c.ok) return S.verdictOk;
+    const why = [];
+    if (!c.c1) why.push(fmt(S.whyC1, Math.abs(c.nExt - c.nZero)));
+    if (!c.c2) why.push(fmt(S.whyC2, (c.sym * 100).toFixed(1)));
+    return fmt(S.verdictNoWhy, T1.round, why.join(S.whyAnd));
   }
 
   function render1Table() {
@@ -375,7 +405,7 @@
     if (T2.baseF[T2.stage] === undefined) {
       const q = SIGNALS.sleepSignal(T2.stage, 0);
       const d = EMD.emd(q.y, 6);
-      T2.baseF[T2.stage] = EMD.zeroCrossingFreq(d.imfs[0], q.fs);
+      T2.baseF[T2.stage] = EMD.meanFreq(d.imfs[0], q.fs);
     }
   }
 
@@ -388,45 +418,23 @@
     T2.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
     rows.push({ label: S.p2Residue, data: T2.dec.residue, isResidue: true });
 
-    const host = $('#t2Rows');
-    host.innerHTML = rows.map((r, k) => {
-      let meta;
+    rows.forEach(r => {
       if (r.isSignal) {
-        meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV peak';
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV peak';
       } else if (r.isResidue) {
-        meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV';
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(0) + ' µV';
       } else {
-        const f = EMD.zeroCrossingFreq(r.data, T2.sig.fs);
+        const f = EMD.meanFreq(r.data, T2.sig.fs);
         const band = SIGNALS.bandOf(f);
-        meta = '<b>' + r.label + '</b>' +
-               f.toFixed(1) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(0) + ' µV<br>' +
-               '<span class="band">' + (S.p2Band[band] || band) + '</span>';
+        r.meta = '<b>' + r.label + '</b>' +
+                 f.toFixed(1) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(0) + ' µV<br>' +
+                 '<span class="band">' + (S.p2Band[band] || band) + '</span>';
       }
-      return '<div class="imf-row' + (r.isSignal ? ' is-signal' : '') + '">' +
-             '<div class="imf-meta">' + meta + '</div>' +
-             '<canvas data-row="' + k + '" aria-hidden="true"></canvas></div>';
-    }).join('');
-
-    const t = T2.sig.t, tmax = t[t.length - 1];
-    $$('canvas', host).forEach((cv, k) => {
-      const r = rows[k];
-      const rg = span([r.data], 0.15);
-      const p = makePlot(cv, r.isSignal ? 74 : 58, {
-        xMin: 0, xMax: tmax, yMin: rg.yMin, yMax: rg.yMax,
-        padL: 44, padR: 8, padT: 6, padB: k === rows.length - 1 ? 18 : 6
-      });
-      if (!p) return;
-      axes(p, {
-        yTicks: [0], yFmt: () => '0',
-        xFmt: v => v.toFixed(0),
-        xLabels: k === rows.length - 1
-      });
-      series(p, r.data, t, r.isSignal ? COL.trace : COL.trace, r.isSignal ? 1.5 : 1.2, null, r.isSignal ? 1 : 0.78);
     });
+    drawStack($('#t2Rows'), rows, T2.sig.t);
+    $('#t2Axis').textContent = 't (s) →  0 … ' + T2.sig.t[T2.sig.n - 1].toFixed(2);
 
-    $('#t2Axis').textContent = 't (s) →  0 … ' + tmax.toFixed(2);
-
-    const f1 = EMD.zeroCrossingFreq(T2.dec.imfs[0], T2.sig.fs);
+    const f1 = EMD.meanFreq(T2.dec.imfs[0], T2.sig.fs);
     $('#t2NoiseNote').textContent = T2.noise === 0
       ? fmt(S.p2NoiseNoteZero, f1.toFixed(1))
       : fmt(S.p2NoiseNote, T2.baseF[T2.stage].toFixed(1), f1.toFixed(1));
@@ -586,20 +594,279 @@
   }
 
   /* ==========================================================
+     CHAPTER 01 — local extrema
+     ========================================================== */
+  const TX = { f2: 7, a2: 2.5, pos: 96, sig: null, ext: null, nZero: 0 };
+
+  function txCompute() {
+    TX.sig = SIGNALS.extremaSignal(TX.f2, TX.a2);
+    TX.ext = EMD.findExtrema(TX.sig.y);
+    TX.nZero = EMD.countZeroCrossings(TX.sig.y);
+    if (TX.pos > TX.sig.n - 2) TX.pos = TX.sig.n - 2;
+    if (TX.pos < 1) TX.pos = 1;
+  }
+
+  function renderExt() {
+    const sig = TX.sig, t = sig.t, y = sig.y, i = TX.pos;
+    $('#xFreqOut').textContent = TX.f2.toFixed(1) + ' Hz';
+    $('#xAmpOut').textContent = TX.a2.toFixed(1);
+    $('#xPosOut').textContent = 'i = ' + i;
+
+    const rg = span([y], 0.14);
+    const p = makePlot($('#xMain'), 250, { xMin: t[0], xMax: t[sig.n - 1], yMin: rg.yMin, yMax: rg.yMax });
+    if (p) {
+      axes(p, { yFmt: v => v.toFixed(0), xFmt: v => v.toFixed(1) });
+      const ctx = p.ctx;
+      ctx.save();
+      ctx.strokeStyle = COL.haze; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x0, Math.round(p.Y(0)) + 0.5); ctx.lineTo(p.x1, Math.round(p.Y(0)) + 0.5); ctx.stroke();
+      ctx.restore();
+      series(p, y, t, COL.trace, 1.6);
+      dots(p, TX.ext.maxI, y, t, COL.coral, true);
+      dots(p, TX.ext.minI, y, t, COL.coral, false);
+      /* the three samples under test */
+      ctx.save();
+      ctx.strokeStyle = COL.cyan; ctx.globalAlpha = 0.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(p.X(t[i]), p.y0); ctx.lineTo(p.X(t[i]), p.y1); ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      ctx.fillStyle = COL.cyan;
+      [i - 1, i, i + 1].forEach(k => {
+        if (k < 0 || k >= sig.n) return;
+        ctx.beginPath(); ctx.arc(p.X(t[k]), p.Y(y[k]), k === i ? 4 : 2.8, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+      TX._plot = p;
+    }
+
+    const isMax = i > 0 && i < sig.n - 1 && y[i] > y[i - 1] && y[i] >= y[i + 1];
+    const isMin = i > 0 && i < sig.n - 1 && y[i] < y[i - 1] && y[i] <= y[i + 1];
+    const verdict = isMax ? S.exIsMax : isMin ? S.exIsMin : S.exIsNone;
+    const cls = (isMax || isMin) ? 'ok' : 'no';
+    $('#xPanel').innerHTML =
+      '<div class="check ' + cls + '">' +
+      '<span class="tag">' + fmt(S.exPanelTitle, i) + '</span>' +
+      '<span class="mono">' +
+        fmt(S.exNb, i - 1, y[i - 1].toFixed(3)) + '　' +
+        fmt(S.exNb, i, y[i].toFixed(3)) + '　' +
+        fmt(S.exNb, i + 1, y[i + 1].toFixed(3)) +
+      '</span>' +
+      '<span class="val">' + verdict + '</span></div>';
+
+    const nMax = TX.ext.maxI.length, nMin = TX.ext.minI.length, nExt = nMax + nMin;
+    const diff = Math.abs(nExt - TX.nZero);
+    $('#xCounts').innerHTML =
+      '<div>' + fmt(S.exCount, nMax, nMin, nExt) + '　·　' + fmt(S.exZero, TX.nZero) + '</div>' +
+      '<div class="' + (diff <= 1 ? '' : 'hi') + '">' +
+      fmt(diff <= 1 ? S.exDiffOk : S.exDiffNo, nExt, TX.nZero, diff) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 02 — envelopes and the end effect
+     ========================================================== */
+  const TE = { mode: 'linear', n: 1008, sig: null, up: null, lo: null, gap: 0, errEdge: 0, errMid: 0 };
+
+  function teCompute() {
+    TE.sig = SIGNALS.amSignal(TE.n);
+    const prev = EMD.CFG.boundary;
+    EMD.CFG.boundary = TE.mode;
+    const ex = EMD.findExtrema(TE.sig.y);
+    const e = EMD.envelopes(TE.sig.y, ex.maxI, ex.minI);
+    EMD.CFG.boundary = prev;
+    TE.up = e.up; TE.lo = e.lo;
+    TE.lastMax = ex.maxI[ex.maxI.length - 1];
+    TE.gap = TE.sig.n - 1 - TE.lastMax;
+
+    const edge = Math.round(TE.sig.n * 0.1);
+    let eE = 0, eM = 0;
+    for (let i = 0; i < TE.sig.n; i++) {
+      const err = Math.abs(TE.up[i] - TE.sig.env[i]) / TE.sig.env[i] * 100;
+      if (i < edge || i >= TE.sig.n - edge) eE = Math.max(eE, err); else eM = Math.max(eM, err);
+    }
+    TE.errEdge = eE; TE.errMid = eM;
+  }
+
+  function renderEnv() {
+    $$('#eModes .btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === TE.mode)));
+    $$('#eModes .btn').forEach(b => { b.textContent = S['envMode' + b.dataset.mode.charAt(0).toUpperCase() + b.dataset.mode.slice(1)]; });
+    $('#eCutOut').textContent = TE.n + ' pts';
+    $('#eModeDesc').textContent = S['envModeDesc' + TE.mode.charAt(0).toUpperCase() + TE.mode.slice(1)];
+
+    const sig = TE.sig, t = sig.t;
+    const rg = span([sig.y, TE.up, TE.lo, sig.env], 0.1);
+    const p = makePlot($('#eMain'), 280, { xMin: 0, xMax: t[sig.n - 1], yMin: rg.yMin, yMax: rg.yMax });
+    if (p) {
+      axes(p, { yFmt: v => v.toFixed(0), xFmt: v => v.toFixed(1) });
+      /* shade the extrapolated tail */
+      const ctx = p.ctx;
+      ctx.save();
+      ctx.fillStyle = COL.coral; ctx.globalAlpha = 0.07;
+      ctx.fillRect(p.X(t[TE.lastMax]), p.y0, p.x1 - p.X(t[TE.lastMax]), p.y1 - p.y0);
+      ctx.restore();
+      series(p, TE.up, t, COL.cyan, 1.6);
+      series(p, TE.lo, t, COL.cyan, 1.3, [4, 4]);
+      series(p, sig.y, t, COL.trace, 1.3, null, 0.85);
+      /* truth last, so it stays visible where it coincides with the estimate */
+      series(p, sig.env, t, COL.sage, 1.6, [5, 4]);
+    }
+    $('#eLegend').innerHTML =
+      '<span><i style="background:' + COL.trace + '"></i>' + S.legSignal + '</span>' +
+      '<span><i style="background:' + COL.cyan + '"></i>' + S.legUp + '</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,' + COL.cyan + ' 0 4px,transparent 4px 8px)"></i>' + S.legLo + '</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,' + COL.sage + ' 0 5px,transparent 5px 9px)"></i>' + S.envTruthLeg + '</span>';
+
+    $('#eReadout').innerHTML =
+      '<div>' + fmt(S.envGap, TE.lastMax, TE.gap) + '</div>' +
+      '<div>' + fmt(S.envErr, TE.errEdge.toFixed(2), TE.errMid.toFixed(2)) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 04 — signal lab
+     ========================================================== */
+  const TL = {
+    comps: [{ f: 1.5, a: 5 }, { f: 7, a: 3 }, { f: 18, a: 1.5 }],
+    noise: 0, sig: null, dec: null, err: 0
+  };
+
+  function tlCompute() {
+    TL.sig = SIGNALS.labSignal(TL.comps, TL.noise);
+    TL.dec = EMD.emd(TL.sig.y, 6);
+    let e = 0;
+    for (let i = 0; i < TL.sig.n; i++) {
+      let v = TL.dec.residue[i];
+      for (let k = 0; k < TL.dec.imfs.length; k++) v += TL.dec.imfs[k][i];
+      e = Math.max(e, Math.abs(v - TL.sig.y[i]));
+    }
+    TL.err = e;
+  }
+
+  function renderLab() {
+    TL.comps.forEach((c, k) => {
+      $('#lF' + k + 'Out').textContent = c.f.toFixed(1) + ' Hz';
+      $('#lA' + k + 'Out').textContent = c.a.toFixed(1);
+    });
+    $('#lNoiseOut').textContent = TL.noise.toFixed(1);
+
+    const rows = [{ label: S.p2Signal, data: TL.sig.y, isSignal: true }];
+    TL.dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    rows.push({ label: S.p2Residue, data: TL.dec.residue, isResidue: true });
+    rows.forEach(r => {
+      if (r.isSignal || r.isResidue) {
+        r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(2);
+      } else {
+        const f = EMD.meanFreq(r.data, TL.sig.fs);
+        r.meta = '<b>' + r.label + '</b>' + f.toFixed(2) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(2);
+      }
+    });
+    drawStack($('#lRows'), rows, TL.sig.t);
+    $('#lRecon').innerHTML = fmt(S.labRecon, TL.err.toExponential(2), TL.sig.n);
+  }
+
+  /* ==========================================================
+     CHAPTER 07 — mode mixing and EEMD
+     ========================================================== */
+  const TM = {
+    bursts: 3, freq: 12, method: 'eemd', ens: 40, noise: 0.1,
+    sig: null, demd: null, deemd: null, rEmd: 0, rEemd: 0
+  };
+
+  function tmCompute() {
+    TM.sig = SIGNALS.mixingSignal(TM.bursts, TM.freq);
+    TM.demd = EMD.emd(TM.sig.y, 6);
+    TM.deemd = EMD.eemd(TM.sig.y, { ensemble: TM.ens, noiseRatio: TM.noise, maxImf: 6 });
+    const a = 60, b = TM.sig.n - 60;
+    TM.rEmd = EMD.correlation(TM.demd.imfs[0], TM.sig.fast, a, b);
+    TM.rEemd = EMD.correlation(TM.deemd.imfs[0], TM.sig.fast, a, b);
+  }
+
+  function renderMix() {
+    $$('#mMethods .btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.method === TM.method)));
+    $('#mBurstsOut').textContent = String(TM.bursts);
+    $('#mFreqOut').textContent = TM.freq.toFixed(0) + ' Hz';
+    $('#mEnsOut').textContent = String(TM.ens);
+    $('#mNoiseOut').textContent = TM.noise.toFixed(2) + ' σ';
+    $('#mEemdControls').hidden = TM.method !== 'eemd';
+
+    const dec = TM.method === 'eemd' ? TM.deemd : TM.demd;
+    const rows = [
+      { label: S.p2Signal, data: TM.sig.y, isSignal: true },
+      { label: S.mixTrue, data: TM.sig.fast, colour: COL.sage }
+    ];
+    dec.imfs.forEach((c, k) => rows.push({ label: 'IMF' + (k + 1), data: c }));
+    rows.push({ label: S.p2Residue, data: dec.residue, isResidue: true });
+    rows.forEach((r, k) => {
+      if (k === 1) { r.meta = '<b>' + r.label + '</b>' + TM.freq.toFixed(0) + ' Hz'; return; }
+      if (r.isSignal || r.isResidue) { r.meta = '<b>' + r.label + '</b>' + EMD.peakAmp(r.data).toFixed(2); return; }
+      const f = EMD.meanFreq(r.data, TM.sig.fs);
+      r.meta = '<b>' + r.label + '</b>' + f.toFixed(2) + ' Hz · ' + EMD.peakAmp(r.data).toFixed(2);
+    });
+    drawStack($('#mRows'), rows, TM.sig.t);
+
+    $('#mReadout').innerHTML =
+      '<div>' + S.mixCorrTitle + '</div>' +
+      '<div>' + fmt(S.mixCorrEmd, TM.rEmd.toFixed(4)) + '</div>' +
+      '<div>' + fmt(S.mixCorrEemd, TM.ens, TM.noise.toFixed(2), TM.rEemd.toFixed(4)) + '</div>';
+  }
+
+  /* ==========================================================
+     CHAPTER 08 — the papers
+     ========================================================== */
+  const TP = { open: 0 };
+
+  function renderPaper() {
+    const byRef = {};
+    I18N.REFS.forEach(r => { if (r.n) byRef[r.n] = r; });
+    $('#pCards').innerHTML = S.papers.map((c, k) => {
+      const r = byRef[c.ref] || {};
+      const isOpen = TP.open === k;
+      return '<div class="paper' + (isOpen ? ' is-open' : '') + '">' +
+        '<button class="paper-head" type="button" data-card="' + k + '" aria-expanded="' + isOpen + '">' +
+          '<span class="n">[' + c.ref + ']</span>' +
+          '<span class="ph"><b>' + c.head + '</b><span class="cite">' + (r.cite || '') + '</span></span>' +
+          '<span class="tog">' + (isOpen ? '−' : '+') + '</span>' +
+        '</button>' +
+        '<div class="paper-body"' + (isOpen ? '' : ' hidden') + '>' +
+          '<dl>' +
+            '<dt>' + (LANG === 'zh' ? '問題' : 'Question') + '</dt><dd>' + c.task + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '做法' : 'Method') + '</dt><dd>' + c.method + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '結果' : 'Result') + '</dt><dd>' + c.result + '</dd>' +
+            '<dt>' + (LANG === 'zh' ? '重點' : 'The point') + '</dt><dd>' + c.point + '</dd>' +
+          '</dl>' +
+          (r.doi ? '<p class="meta">' + r.where + ' DOI: <a href="https://doi.org/' + r.doi +
+                   '" target="_blank" rel="noopener">' + r.doi + '</a></p>' : '') +
+        '</div></div>';
+    }).join('');
+
+    $$('#pCards .paper-head').forEach(b => b.addEventListener('click', () => {
+      const k = +b.dataset.card;
+      TP.open = TP.open === k ? -1 : k;
+      renderPaper();
+    }));
+
+    $('#pTable').innerHTML =
+      '<table><thead><tr><th>' + S.thDataset + '</th><th>' + S.thFour + '</th><th>' + S.thFive + '</th></tr></thead><tbody>' +
+      S.paperTable.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+
+  /* ==========================================================
      tabs, language, wiring
      ========================================================== */
-  let activeTab = 1;
-  function showTab(n) {
-    activeTab = n;
-    $$('.tab').forEach(b => b.setAttribute('aria-selected', String(+b.dataset.tab === n)));
-    $$('.panel').forEach(pn => { pn.hidden = +pn.dataset.tab !== n; });
+  const RENDER = {
+    ext: renderExt, env: renderEnv, sift: render1, lab: renderLab,
+    stage: render2, spec: render3, mix: renderMix, paper: renderPaper
+  };
+  let activeTab = 'sift';
+  function showTab(k) {
+    activeTab = k;
+    $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
+    $$('.panel').forEach(pn => { pn.hidden = pn.dataset.tab !== k; });
     redrawActive();
   }
   function redrawActive() {
-    /* a hidden canvas has zero width, so each tab redraws on show */
-    if (activeTab === 1) render1();
-    else if (activeTab === 2) render2();
-    else render3();
+    /* a hidden canvas has zero width, so each chapter redraws on show */
+    const f = RENDER[activeTab];
+    if (f) f();
   }
 
   function applyLang() {
@@ -609,13 +876,16 @@
       const v = S[e.dataset.i18n];
       if (typeof v === 'string') e.innerHTML = v;
     });
-    $('#langBtn').textContent = S.langBtn;
-    $('#langBtn').title = S.langTitle;
+    /* a two-state toggle, so which language is active is never in doubt */
+    $$('#langToggle .seg').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.lang === LANG));
+    });
+    $('#langToggle').title = S.langTitle;
     $('#themeBtn').textContent = currentTheme() === 'dark' ? S.themeBtn : S.themeBtnDark;
     $('#t1Next').textContent = T1.done ? S.p1Reset : S.p1Next;
 
     $$('#t2Stages .btn').forEach(b => { b.textContent = S.stageNames[b.dataset.stage]; });
-    $$('.tab').forEach(b => { b.textContent = S['t' + b.dataset.tab]; });
+    $$('.tab').forEach(b => { b.textContent = S['tab_' + b.dataset.tab]; });
 
     buildImplList();
     buildRefs();
@@ -662,16 +932,21 @@
     readColours();
 
     heroCompute();
+    txCompute();
+    teCompute();
     t1Reset();
+    tlCompute();
     t2Compute();
     t3Compute();
+    tmCompute();
 
     /* ---- top bar ---- */
-    $('#langBtn').addEventListener('click', () => {
-      LANG = LANG === 'zh' ? 'en' : 'zh';
+    $$('#langToggle .seg').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.lang === LANG) return;
+      LANG = b.dataset.lang;
       save('emd-lang', LANG);
       applyLang();
-    });
+    }));
     $('#themeBtn').addEventListener('click', () => {
       const next = currentTheme() === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
@@ -694,7 +969,7 @@
     }
 
     /* ---- tabs ---- */
-    $$('.tab').forEach(b => b.addEventListener('click', () => showTab(+b.dataset.tab)));
+    $$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
     /* ---- tab 1 ---- */
     $('#t1Next').addEventListener('click', t1Next);
@@ -730,6 +1005,64 @@
       schedule(() => { t3Compute(); render3(); });
     });
 
+    /* ---- chapter 01: local extrema ---- */
+    const xF = $('#xFreq'), xA = $('#xAmp'), xP = $('#xPos');
+    xP.max = String(SIGNALS.extremaSignal(7, 2).n - 2);
+    xF.addEventListener('input', () => { TX.f2 = +xF.value; schedule(() => { txCompute(); renderExt(); }); });
+    xA.addEventListener('input', () => { TX.a2 = +xA.value; schedule(() => { txCompute(); renderExt(); }); });
+    xP.addEventListener('input', () => { TX.pos = +xP.value; schedule(renderExt); });
+    $('#xMain').addEventListener('click', ev => {
+      const p = TX._plot;
+      if (!p) return;
+      const r = ev.currentTarget.getBoundingClientRect();
+      const x = ev.clientX - r.left;
+      const frac = (x - p.x0) / (p.x1 - p.x0);
+      const i = Math.max(1, Math.min(TX.sig.n - 2, Math.round(frac * (TX.sig.n - 1))));
+      TX.pos = i; xP.value = String(i);
+      renderExt();
+    });
+
+    /* ---- chapter 02: envelopes and ends ---- */
+    $$('#eModes .btn').forEach(b => b.addEventListener('click', () => {
+      TE.mode = b.dataset.mode;
+      teCompute(); renderEnv();
+    }));
+    const eCut = $('#eCut');
+    eCut.addEventListener('input', () => {
+      TE.n = +eCut.value;
+      schedule(() => { teCompute(); renderEnv(); });
+    });
+
+    /* ---- chapter 04: signal lab ---- */
+    for (let k = 0; k < 3; k++) {
+      const fIn = $('#lF' + k), aIn = $('#lA' + k);
+      fIn.addEventListener('input', () => { TL.comps[k].f = +fIn.value; schedule(() => { tlCompute(); renderLab(); }); });
+      aIn.addEventListener('input', () => { TL.comps[k].a = +aIn.value; schedule(() => { tlCompute(); renderLab(); }); });
+    }
+    const lN = $('#lNoise');
+    lN.addEventListener('input', () => { TL.noise = +lN.value; schedule(() => { tlCompute(); renderLab(); }); });
+    const PRESETS = {
+      two:   [{ f: 1.5, a: 5 }, { f: 7, a: 3 }, { f: 18, a: 1.5 }],
+      close: [{ f: 4, a: 4 }, { f: 5, a: 4 }, { f: 16, a: 1 }],
+      slow:  [{ f: 0.8, a: 6 }, { f: 2, a: 2 }, { f: 13, a: 2.5 }]
+    };
+    $$('#lPresets .btn').forEach(b => b.addEventListener('click', () => {
+      TL.comps = PRESETS[b.dataset.preset].map(c => ({ f: c.f, a: c.a }));
+      TL.comps.forEach((c, k) => { $('#lF' + k).value = String(c.f); $('#lA' + k).value = String(c.a); });
+      tlCompute(); renderLab();
+    }));
+
+    /* ---- chapter 07: mode mixing and EEMD ---- */
+    $$('#mMethods .btn').forEach(b => b.addEventListener('click', () => {
+      TM.method = b.dataset.method;
+      renderMix();
+    }));
+    const mB = $('#mBursts'), mF = $('#mFreq'), mE = $('#mEns'), mN = $('#mNoise');
+    mB.addEventListener('input', () => { TM.bursts = +mB.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mF.addEventListener('input', () => { TM.freq = +mF.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mE.addEventListener('input', () => { TM.ens = +mE.value; schedule(() => { tmCompute(); renderMix(); }); });
+    mN.addEventListener('input', () => { TM.noise = +mN.value; schedule(() => { tmCompute(); renderMix(); }); });
+
     /* ---- resize ---- */
     let rt = 0;
     window.addEventListener('resize', () => {
@@ -738,7 +1071,7 @@
     });
 
     applyLang();
-    showTab(1);
+    showTab('sift');
     drawHero();
   }
 

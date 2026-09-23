@@ -168,6 +168,75 @@ hr('6. Tab 3: move one spindle in time, watch both spectra');
     worst < 0.2, `largest error = ${worst.toFixed(3)} s`);
 }
 
+/* 7. EEMD really does cure the mode mixing it is meant to cure */
+hr('7. EEMD on an intermittent signal (mode mixing)');
+{
+  const m = S.mixingSignal(3, 12);
+  const de = E.emd(m.y, 7);
+  const rEmd = E.correlation(de.imfs[0], m.fast, 60, m.n - 60);
+  const dd = E.eemd(m.y, { ensemble: 40, noiseRatio: 0.1, maxImf: 7 });
+  const rEemd = E.correlation(dd.imfs[0], m.fast, 60, m.n - 60);
+  console.log(`    plain EMD: ${de.imfs.length} IMFs, corr(IMF1, burst) = ${rEmd.toFixed(4)}`);
+  console.log(`    EEMD (40 members, noise 0.10 sd): ${dd.imfs.length} IMFs, corr(IMF1, burst) = ${rEemd.toFixed(4)}`);
+  check('plain EMD shows mode mixing on this signal', rEmd < 0.6, `corr = ${rEmd.toFixed(4)} (well below 1)`);
+  check('EEMD recovers the burst component', rEemd > 0.95, `corr = ${rEemd.toFixed(4)}`);
+  check('EEMD is a large improvement', rEemd - rEmd > 0.5, `${rEmd.toFixed(3)} -> ${rEemd.toFixed(3)}`);
+
+  /* the averaged IMFs plus the returned residue still reconstruct exactly */
+  let maxErr = 0;
+  for (let i = 0; i < m.n; i++) {
+    let s2 = dd.residue[i];
+    for (let k = 0; k < dd.imfs.length; k++) s2 += dd.imfs[k][i];
+    maxErr = Math.max(maxErr, Math.abs(s2 - m.y[i]));
+  }
+  check('EEMD reconstruction stays exact', maxErr < 1e-12, `max error = ${maxErr.toExponential(3)}`);
+}
+
+/* 8. the end effect is real, and no boundary rule is universally right */
+hr('8. End effect: three boundary rules on a signal whose true envelope is known');
+console.log('   y = A(t)*sin(2*pi*0.9*t) with A(t) rising linearly; the true upper');
+console.log('   envelope is A(t) itself, so the error can be measured exactly.');
+{
+  const fs = 100, n = 1008, NT = 1024;
+  const y = new Float64Array(n), truth = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / fs, A = 5 * (1 + 0.9 * t / (NT / fs));
+    truth[i] = A;
+    y[i] = A * Math.sin(2 * Math.PI * 0.9 * t + 0.7);
+  }
+  const ex = E.findExtrema(y);
+  const gap = n - 1 - ex.maxI[ex.maxI.length - 1];
+  console.log(`   the last maximum sits ${gap} samples before the end, so that much is extrapolated`);
+
+  const edge = Math.round(n * 0.1);
+  const ups = {};
+  ['none', 'linear', 'mirror'].forEach(mode => {
+    E.CFG.boundary = mode;
+    const s2 = E.siftOnce(y);
+    ups[mode] = Float64Array.from(s2.up);
+    let eE = 0, eM = 0;
+    for (let i = 0; i < n; i++) {
+      const err = Math.abs(s2.up[i] - truth[i]) / truth[i] * 100;
+      if (i < edge || i >= n - edge) eE = Math.max(eE, err); else eM = Math.max(eM, err);
+    }
+    console.log(`    ${mode.padEnd(7)}: upper-envelope error, outer 10% = ${eE.toFixed(2)}%, inner 80% = ${eM.toFixed(2)}%`);
+  });
+  E.CFG.boundary = 'linear';
+
+  /* how much do the three rules disagree, and where? */
+  let dEdge = 0, dMid = 0;
+  for (let i = 0; i < n; i++) {
+    const v = [ups.none[i], ups.linear[i], ups.mirror[i]];
+    const d = Math.max.apply(null, v) - Math.min.apply(null, v);
+    if (i < edge || i >= n - edge) dEdge = Math.max(dEdge, d); else dMid = Math.max(dMid, d);
+  }
+  check('the boundary rules disagree near the ends', dEdge > 0.2,
+    `largest disagreement in the outer 10% = ${dEdge.toFixed(3)}`);
+  check('and agree an order of magnitude more closely in the middle',
+    dMid < dEdge * 0.15, `middle = ${dMid.toExponential(2)} vs edges = ${dEdge.toFixed(3)} ` +
+    `(ratio ${(dMid / dEdge * 100).toFixed(1)}% -- the boundary error does leak inward)`);
+}
+
 hr('SUMMARY');
 console.log(`  ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

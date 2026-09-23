@@ -79,7 +79,9 @@
       /* ---- tab 2 ---- */
       p2Title: '五個睡眠期分解出什麼',
       p2Intro: '依睡眠醫學的描述合成五段 10.24 秒的腦波，然後對每一段做完整的 EMD。' +
-               '每條 IMF 右邊標出用過零率估計的主頻、峰值振幅，以及對應的腦波頻帶。',
+               '每條 IMF 左邊標出主頻、峰值振幅與對應的腦波頻帶。主頻取的是「振幅加權的平均瞬時頻率」' +
+               '（由希爾伯特轉換算出），不是過零率——過零率對間歇性的 IMF 會嚴重高估，' +
+               '第 07 章有一個 12 Hz 的爆發被過零率讀成 25 Hz 的例子。',
       p2Noise: '加入雜訊',
       p2NoiseUnit: 'µV',
       stageNames: { wake: '清醒', n1: 'N1 淺睡', n2: 'N2', n3: 'N3 深睡', rem: 'REM' },
@@ -161,7 +163,7 @@
       implEyebrow: '實作',
       implTitle: '這個頁面裡跑的是什麼',
       implIntro: '所有數值都是在你的瀏覽器裡即時算出來的，沒有預先產生的圖，也沒有用任何函式庫。' +
-                 '以下九個函式全部手寫：',
+                 '以下函式全部手寫：',
       implList: [
         ['cubicSpline', '自然三次樣條。用 Thomas 演算法解三對角系統求各節點的二階導數，再逐段求值。'],
         ['findExtrema', '逐點與左右鄰居比較找局部極值，平台區段收斂成單一點。'],
@@ -171,7 +173,9 @@
         ['sift', '反覆篩選，SD < 0.2 停止，上限 12 次。'],
         ['emd', '反覆抽取 IMF 並從殘量中扣除，直到極值不足或能量過小。'],
         ['fft / spectrum', '疊代式 radix-2 原地 FFT，以及單邊振幅頻譜。'],
-        ['hilbert', '以 FFT 建構解析訊號，相位差 unwrap 後換算成瞬時頻率。']
+        ['hilbert', '以 FFT 建構解析訊號，相位差 unwrap 後換算成瞬時頻率。'],
+        ['eemd', '集成經驗模態分解：對多組「原訊號 + 白雜訊」各做一次 EMD，再平均對應的 IMF。'],
+        ['meanFreq', '振幅加權的平均瞬時頻率，用來標註每條 IMF 的主頻。']
       ],
       implTests: '演算法先用 Node 測過才接上畫面。測試內容包括：IMF1 與 13 Hz 成分的相關係數 0.999938；' +
                  '所有 IMF 加殘量重建原訊號的最大誤差 1.78 × 10⁻¹⁵；' +
@@ -279,8 +283,10 @@
 
       p2Title: 'What five sleep stages decompose into',
       p2Intro: 'Five 10.24-second epochs synthesised from the sleep-medicine description of each stage, then fully ' +
-               'decomposed. Each IMF is labelled with its dominant frequency (from the zero-crossing rate), its peak ' +
-               'amplitude, and the EEG band it falls in.',
+               'decomposed. Each IMF is labelled with its dominant frequency, peak amplitude and EEG band. The ' +
+               'frequency is the amplitude-weighted mean instantaneous frequency from the Hilbert transform rather ' +
+               'than a zero-crossing rate, because the zero-crossing rate badly overestimates an intermittent IMF — ' +
+               'chapter 07 has a 12 Hz burst train that reads as 25 Hz that way.',
       p2Noise: 'Added noise',
       p2NoiseUnit: 'µV',
       stageNames: { wake: 'Wake', n1: 'N1', n2: 'N2', n3: 'N3', rem: 'REM' },
@@ -366,7 +372,7 @@
       implEyebrow: 'Implementation',
       implTitle: 'What is actually running on this page',
       implIntro: 'Every number here is computed in your browser as you interact with it. No pre-rendered figures, ' +
-                 'no libraries. These nine functions are written from scratch:',
+                 'no libraries. These functions are written from scratch:',
       implList: [
         ['cubicSpline', 'Natural cubic spline: the tridiagonal system for the second derivatives is solved with the Thomas algorithm, then each piece is evaluated.'],
         ['findExtrema', 'Local extrema by comparison with both neighbours; plateaux collapse to a single point.'],
@@ -376,7 +382,9 @@
         ['sift', 'Repeated sifting, stopping at SD < 0.2, capped at 12 iterations.'],
         ['emd', 'Extracts IMFs one at a time and subtracts each from the remainder until too few extrema or too little energy is left.'],
         ['fft / spectrum', 'Iterative in-place radix-2 FFT, and the single-sided amplitude spectrum.'],
-        ['hilbert', 'Builds the analytic signal through the FFT; the phase difference is unwrapped and converted to an instantaneous frequency.']
+        ['hilbert', 'Builds the analytic signal through the FFT; the phase difference is unwrapped and converted to an instantaneous frequency.'],
+        ['eemd', 'Ensemble EMD: decomposes many copies of the signal plus white noise and averages the corresponding IMFs.'],
+        ['meanFreq', 'Amplitude-weighted mean instantaneous frequency, used to label each IMF.']
       ],
       implTests: 'The algorithms were verified under Node before any of this was drawn. The suite checks that IMF1 ' +
                  'correlates with the 13 Hz component at r = 0.999938; that the IMFs plus the residue reconstruct the ' +

@@ -148,6 +148,78 @@
     return { t, y, fs, n };
   }
 
+  /* ---------- mode mixing demo -------------------------------
+     A slow carrier plus a fast burst that is only present part
+     of the time. Intermittency is exactly what makes the sifting
+     process reach different decisions in different segments, so
+     this is the textbook way to produce mode mixing.           */
+  function mixingSignal(nBursts, burstFreq) {
+    const fs = SLEEP_FS, n = SLEEP_N;
+    nBursts = nBursts === undefined ? 3 : nBursts;
+    burstFreq = burstFreq === undefined ? 12 : burstFreq;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    const slow = new Float64Array(n), fast = new Float64Array(n);
+    const dur = n / fs;
+    for (let i = 0; i < n; i++) {
+      const ti = t[i];
+      slow[i] = 5 * Math.sin(2 * Math.PI * 1.0 * ti);
+      let b = 0;
+      for (let k = 0; k < nBursts; k++) {
+        const c = dur * (k + 0.5) / nBursts;
+        b += gauss(ti, c, 0.30);
+      }
+      fast[i] = 2.2 * Math.min(1, b) * Math.sin(2 * Math.PI * burstFreq * ti);
+      y[i] = slow[i] + fast[i];
+    }
+    return { t, y, slow, fast, fs, n };
+  }
+
+  /* ---------- envelope / end-effect demo ---------------------
+     Amplitude rises linearly, so the true upper envelope is
+     known in closed form and the error of each boundary rule
+     can be measured rather than argued about.                 */
+  function amSignal(n) {
+    const fs = SLEEP_FS, full = SLEEP_N;
+    n = n || full;
+    const t = timeAxis(n, fs), y = new Float64Array(n), env = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const ti = t[i];
+      const A = 5 * (1 + 0.9 * ti / (full / fs));
+      env[i] = A;
+      y[i] = A * Math.sin(2 * Math.PI * 0.9 * ti + 0.7);
+    }
+    return { t, y, env, fs, n };
+  }
+
+  /* ---------- tab 4: three sinusoids you can dial ------------ */
+  function labSignal(comps, noiseLevel) {
+    const fs = SLEEP_FS, n = SLEEP_N;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let v = 0;
+      for (let k = 0; k < comps.length; k++) {
+        v += comps[k].a * Math.sin(2 * Math.PI * comps[k].f * t[i] + k * 0.7);
+      }
+      y[i] = v;
+    }
+    if (noiseLevel > 0) {
+      const nz = gaussNoise(n, noiseLevel, 4242);
+      for (let i = 0; i < n; i++) y[i] += nz[i];
+    }
+    return { t, y, fs, n };
+  }
+
+  /* ---------- tab 1 of the new chapters: extrema ------------- */
+  function extremaSignal(f2, a2) {
+    const fs = 64, n = 256;
+    const t = timeAxis(n, fs), y = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      y[i] = 4 * Math.sin(2 * Math.PI * 1.2 * t[i])
+           + a2 * Math.sin(2 * Math.PI * f2 * t[i] + 0.6);
+    }
+    return { t, y, fs, n };
+  }
+
   /* ---------- test signal of section 5 ----------------------- */
   function testSignal() {
     const fs = 100, n = 1024;
@@ -176,7 +248,8 @@
 
   const SIGNALS = {
     rng, gaussNoise, gauss, timeAxis,
-    teachingSignal, sleepSignal, spindleSignal, testSignal,
+    teachingSignal, sleepSignal, spindleSignal, testSignal, mixingSignal,
+    amSignal, labSignal, extremaSignal,
     SLEEP_STAGES, SLEEP_FS, SLEEP_N, BANDS, bandOf
   };
 
